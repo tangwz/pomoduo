@@ -227,11 +227,14 @@ body {
   color: #24323a;
 }
 
-.settings-grid input {
+.settings-grid input,
+.settings-grid select {
   border: 1px solid #bfd0da;
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 1rem;
+  background: #ffffff;
+  color: #0d1d26;
 }
 
 .settings-toggle {

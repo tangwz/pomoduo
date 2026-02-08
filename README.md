@@ -19,8 +19,12 @@
 - 阶段结束系统通知（可开关）
 - 阶段结束提示音（可开关，前端播放）
 
+### 多语言
+- 支持 `English` / `简体中文` 切换
+- 设置项持久化语言偏好，重启后保持
+
 ### 持久化
-- `settings.json`：时长、长休息间隔、通知/声音开关
+- `settings.json`：时长、长休息间隔、通知/声音开关、语言
 - `runtime_state.json`：phase、running、paused/endAt/remaining 等运行状态
 
 ## 2. 技术栈与架构

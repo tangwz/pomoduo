@@ -1,3 +1,5 @@
+import type { LocaleCode } from '../../i18n/locale';
+
 export type Phase = 'focus' | 'shortBreak' | 'longBreak';
 
 export interface Settings {
@@ -7,6 +9,7 @@ export interface Settings {
   longBreakEvery: number;
   notifyEnabled: boolean;
   soundEnabled: boolean;
+  locale: LocaleCode;
 }
 
 export interface TimerSnapshot {

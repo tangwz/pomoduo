@@ -11,6 +11,8 @@ const DEFAULT_FOCUS_MS: i64 = 25 * 60_000;
 const DEFAULT_SHORT_BREAK_MS: i64 = 5 * 60_000;
 const DEFAULT_LONG_BREAK_MS: i64 = 15 * 60_000;
 const DEFAULT_LONG_BREAK_EVERY: u32 = 4;
+pub const DEFAULT_LOCALE: &str = "en-US";
+pub const ZH_CN_LOCALE: &str = "zh-CN";
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -18,16 +20,6 @@ pub enum Phase {
     Focus,
     ShortBreak,
     LongBreak,
-}
-
-impl Phase {
-    pub fn as_label(self) -> &'static str {
-        match self {
-            Phase::Focus => "Focus",
-            Phase::ShortBreak => "Short Break",
-            Phase::LongBreak => "Long Break",
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,6 +31,8 @@ pub struct Settings {
     pub long_break_every: u32,
     pub notify_enabled: bool,
     pub sound_enabled: bool,
+    #[serde(default = "default_locale")]
+    pub locale: String,
 }
 
 impl Default for Settings {
@@ -50,6 +44,7 @@ impl Default for Settings {
             long_break_every: DEFAULT_LONG_BREAK_EVERY,
             notify_enabled: true,
             sound_enabled: true,
+            locale: default_locale(),
         }
     }
 }
@@ -67,8 +62,21 @@ impl Settings {
             },
             notify_enabled: self.notify_enabled,
             sound_enabled: self.sound_enabled,
+            locale: normalize_locale(&self.locale).to_string(),
         }
     }
+}
+
+pub fn normalize_locale(locale: &str) -> &'static str {
+    let normalized = locale.trim().replace('_', "-").to_ascii_lowercase();
+    match normalized.as_str() {
+        "zh" | "zh-cn" => ZH_CN_LOCALE,
+        _ => DEFAULT_LOCALE,
+    }
+}
+
+fn default_locale() -> String {
+    DEFAULT_LOCALE.to_string()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -106,6 +114,7 @@ struct CompletionMeta {
     next_phase: Phase,
     notify_enabled: bool,
     sound_enabled: bool,
+    locale: String,
 }
 
 #[derive(Debug, Clone)]
@@ -123,11 +132,7 @@ impl TimerState {
         Self::from_storage_at(settings, runtime_state, now_ms())
     }
 
-    fn from_storage_at(
-        settings: Settings,
-        runtime_state: Option<RuntimeState>,
-        now: i64,
-    ) -> Self {
+    fn from_storage_at(settings: Settings, runtime_state: Option<RuntimeState>, now: i64) -> Self {
         let mut state = if let Some(runtime) = runtime_state {
             Self {
                 phase: runtime.phase,
@@ -213,9 +218,7 @@ impl TimerState {
 
         let next_phase = match finished_phase {
             Phase::Focus => {
-                if self.cycle_count > 0
-                    && self.cycle_count % self.settings.long_break_every == 0
-                {
+                if self.cycle_count > 0 && self.cycle_count % self.settings.long_break_every == 0 {
                     Phase::LongBreak
                 } else {
                     Phase::ShortBreak
@@ -234,6 +237,7 @@ impl TimerState {
             next_phase,
             notify_enabled: self.settings.notify_enabled,
             sound_enabled: self.settings.sound_enabled,
+            locale: self.settings.locale.clone(),
         }
     }
 }
@@ -286,7 +290,10 @@ impl TimerEngine {
 
     pub fn get_state(&self) -> TimerSnapshot {
         let now = now_ms();
-        let state = self.state.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let state = self
+            .state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         state.snapshot(now)
     }
 
@@ -300,7 +307,10 @@ impl TimerEngine {
 
     pub fn pause(&self) -> Result<TimerSnapshot, String> {
         let now = now_ms();
-        let mut state = self.state.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut state = self
+            .state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
 
         if !state.is_running {
             return Ok(state.snapshot(now));
@@ -317,7 +327,10 @@ impl TimerEngine {
 
     pub fn skip(&self) -> Result<TimerSnapshot, String> {
         let now = now_ms();
-        let mut state = self.state.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut state = self
+            .state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
 
         state.complete_current_phase(true);
         self.persist_runtime(&state, now)?;
@@ -327,7 +340,10 @@ impl TimerEngine {
 
     pub fn reset(&self) -> Result<TimerSnapshot, String> {
         let now = now_ms();
-        let mut state = self.state.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut state = self
+            .state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
 
         state.phase = Phase::Focus;
         state.is_running = false;
@@ -342,7 +358,10 @@ impl TimerEngine {
 
     pub fn update_settings(&self, settings: Settings) -> Result<TimerSnapshot, String> {
         let now = now_ms();
-        let mut state = self.state.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut state = self
+            .state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
 
         let next_settings = settings.sanitized();
         state.settings = next_settings;
@@ -364,7 +383,10 @@ impl TimerEngine {
 
     fn run_or_resume(&self) -> Result<TimerSnapshot, String> {
         let now = now_ms();
-        let mut state = self.state.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut state = self
+            .state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
 
         if state.is_running {
             return Ok(state.snapshot(now));
@@ -389,7 +411,10 @@ impl TimerEngine {
         let now = now_ms();
         let (tick_snapshot, completed) = {
             let mut completed: Option<CompletionMeta> = None;
-            let mut state = self.state.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+            let mut state = self
+                .state
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
 
             if !state.is_running {
                 return;
@@ -413,8 +438,12 @@ impl TimerEngine {
 
         if let Some(completion) = completed {
             if completion.notify_enabled {
-                self.notifier
-                    .notify_phase_transition(app, completion.finished_phase, completion.next_phase);
+                self.notifier.notify_phase_transition(
+                    app,
+                    completion.finished_phase,
+                    completion.next_phase,
+                    &completion.locale,
+                );
             }
 
             let _ = app.emit(
@@ -478,6 +507,7 @@ mod tests {
             long_break_every: 4,
             notify_enabled: true,
             sound_enabled: true,
+            locale: DEFAULT_LOCALE.to_string(),
         }
     }
 
@@ -599,5 +629,30 @@ mod tests {
         assert_eq!(state.end_at_ms, None);
         assert_eq!(state.remaining_ms, settings.long_break_ms);
         assert_eq!(state.cycle_count, 5);
+    }
+
+    #[test]
+    fn normalize_locale_supports_common_aliases() {
+        assert_eq!(normalize_locale("zh-CN"), ZH_CN_LOCALE);
+        assert_eq!(normalize_locale("zh_cn"), ZH_CN_LOCALE);
+        assert_eq!(normalize_locale("zh"), ZH_CN_LOCALE);
+        assert_eq!(normalize_locale("en"), DEFAULT_LOCALE);
+        assert_eq!(normalize_locale(""), DEFAULT_LOCALE);
+    }
+
+    #[test]
+    fn settings_deserialization_defaults_locale_for_legacy_payload() {
+        let payload = r#"{
+            "focusMs": 1500000,
+            "shortBreakMs": 300000,
+            "longBreakMs": 900000,
+            "longBreakEvery": 4,
+            "notifyEnabled": true,
+            "soundEnabled": true
+        }"#;
+
+        let settings: Settings = serde_json::from_str(payload).unwrap();
+
+        assert_eq!(settings.locale, DEFAULT_LOCALE);
     }
 }

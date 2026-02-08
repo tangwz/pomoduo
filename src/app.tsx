@@ -5,6 +5,7 @@ import {
 } from '@tauri-apps/plugin-notification';
 import SettingsView from './features/settings/SettingsView';
 import TimerView from './features/timer/TimerView';
+import { detectPreferredLocale, I18nProvider, useI18n } from './i18n';
 import {
   listenPhaseCompleted,
   listenTimerTick,
@@ -46,6 +47,60 @@ function playBeep(): void {
   oscillator.onended = () => {
     void audioContext.close();
   };
+}
+
+interface AppContentProps {
+  tab: ActiveTab;
+  snapshot: TimerSnapshot | null;
+  onSwitchTab: (tab: ActiveTab) => void;
+  onStart: () => Promise<void>;
+  onResume: () => Promise<void>;
+  onReset: () => Promise<void>;
+  onSaveSettings: (settings: Settings) => Promise<void>;
+}
+
+function AppContent({
+  tab,
+  snapshot,
+  onSwitchTab,
+  onStart,
+  onResume,
+  onReset,
+  onSaveSettings,
+}: AppContentProps) {
+  const { messages } = useI18n();
+
+  if (!snapshot) {
+    return <main className="app-shell">{messages.loading}</main>;
+  }
+
+  return (
+    <main className="app-shell">
+      <header className="top-bar">
+        <h1>Pomoduo</h1>
+        <nav className="tabs">
+          <button
+            className={tab === 'timer' ? 'active' : ''}
+            onClick={() => onSwitchTab('timer')}
+          >
+            {messages.tabs.timer}
+          </button>
+          <button
+            className={tab === 'settings' ? 'active' : ''}
+            onClick={() => onSwitchTab('settings')}
+          >
+            {messages.tabs.settings}
+          </button>
+        </nav>
+      </header>
+
+      {tab === 'timer' ? (
+        <TimerView snapshot={snapshot} onStart={onStart} onResume={onResume} onReset={onReset} />
+      ) : (
+        <SettingsView settings={snapshot.settings} onSave={onSaveSettings} />
+      )}
+    </main>
+  );
 }
 
 export default function App() {
@@ -97,43 +152,19 @@ export default function App() {
     [],
   );
 
-  if (!snapshot) {
-    return <main className="app-shell">Loading...</main>;
-  }
+  const locale = snapshot?.settings.locale ?? detectPreferredLocale();
 
   return (
-    <main className="app-shell">
-      <header className="top-bar">
-        <h1>Pomoduo</h1>
-        <nav className="tabs">
-          <button
-            className={tab === 'timer' ? 'active' : ''}
-            onClick={() => setTab('timer')}
-          >
-            Timer
-          </button>
-          <button
-            className={tab === 'settings' ? 'active' : ''}
-            onClick={() => setTab('settings')}
-          >
-            Settings
-          </button>
-        </nav>
-      </header>
-
-      {tab === 'timer' ? (
-        <TimerView
-          snapshot={snapshot}
-          onStart={actions.start}
-          onResume={actions.resume}
-          onReset={actions.reset}
-        />
-      ) : (
-        <SettingsView
-          settings={snapshot.settings}
-          onSave={actions.saveSettings}
-        />
-      )}
-    </main>
+    <I18nProvider locale={locale}>
+      <AppContent
+        tab={tab}
+        snapshot={snapshot}
+        onSwitchTab={setTab}
+        onStart={actions.start}
+        onResume={actions.resume}
+        onReset={actions.reset}
+        onSaveSettings={actions.saveSettings}
+      />
+    </I18nProvider>
   );
 }

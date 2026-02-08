@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { normalizeLocale, useI18n, type LocaleCode } from '../../i18n';
 import type { Settings } from '../timer/types';
 
 interface SettingsViewProps {
@@ -13,6 +14,7 @@ interface FormState {
   longBreakEvery: number;
   notifyEnabled: boolean;
   soundEnabled: boolean;
+  locale: LocaleCode;
 }
 
 const MS_PER_MINUTE = 60_000;
@@ -28,6 +30,7 @@ function settingsToFormState(settings: Settings): FormState {
     longBreakEvery: Math.max(1, settings.longBreakEvery),
     notifyEnabled: settings.notifyEnabled,
     soundEnabled: settings.soundEnabled,
+    locale: normalizeLocale(settings.locale),
   };
 }
 
@@ -39,21 +42,31 @@ function formStateToSettings(form: FormState): Settings {
     longBreakEvery: Math.max(1, form.longBreakEvery),
     notifyEnabled: form.notifyEnabled,
     soundEnabled: form.soundEnabled,
+    locale: form.locale,
   };
 }
 
 export default function SettingsView({ settings, onSave }: SettingsViewProps) {
+  const { messages } = useI18n();
   const [form, setForm] = useState<FormState>(settingsToFormState(settings));
 
   useEffect(() => {
     setForm(settingsToFormState(settings));
-  }, [settings]);
+  }, [
+    settings.focusMs,
+    settings.shortBreakMs,
+    settings.longBreakMs,
+    settings.longBreakEvery,
+    settings.notifyEnabled,
+    settings.soundEnabled,
+    settings.locale,
+  ]);
 
   return (
     <section className="settings-panel">
       <div className="settings-grid">
         <label>
-          Focus (minutes)
+          {messages.settings.focusMinutes}
           <input
             type="number"
             min={1}
@@ -67,7 +80,7 @@ export default function SettingsView({ settings, onSave }: SettingsViewProps) {
           />
         </label>
         <label>
-          Short Break (minutes)
+          {messages.settings.shortBreakMinutes}
           <input
             type="number"
             min={1}
@@ -81,7 +94,7 @@ export default function SettingsView({ settings, onSave }: SettingsViewProps) {
           />
         </label>
         <label>
-          Long Break (minutes)
+          {messages.settings.longBreakMinutes}
           <input
             type="number"
             min={1}
@@ -95,7 +108,7 @@ export default function SettingsView({ settings, onSave }: SettingsViewProps) {
           />
         </label>
         <label>
-          Long Break Every
+          {messages.settings.longBreakEvery}
           <input
             type="number"
             min={1}
@@ -108,6 +121,25 @@ export default function SettingsView({ settings, onSave }: SettingsViewProps) {
             }
           />
         </label>
+        <label>
+          {messages.settings.language}
+          <select
+            value={form.locale}
+            onChange={(event) =>
+              setForm((prev) => ({
+                ...prev,
+                locale: normalizeLocale(event.target.value),
+              }))
+            }
+          >
+            <option value="en-US">
+              {messages.settings.languageOptions['en-US']}
+            </option>
+            <option value="zh-CN">
+              {messages.settings.languageOptions['zh-CN']}
+            </option>
+          </select>
+        </label>
       </div>
       <label className="settings-toggle">
         <input
@@ -117,7 +149,7 @@ export default function SettingsView({ settings, onSave }: SettingsViewProps) {
             setForm((prev) => ({ ...prev, notifyEnabled: event.target.checked }))
           }
         />
-        Enable Notifications
+        {messages.settings.notifyEnabled}
       </label>
       <label className="settings-toggle">
         <input
@@ -127,13 +159,13 @@ export default function SettingsView({ settings, onSave }: SettingsViewProps) {
             setForm((prev) => ({ ...prev, soundEnabled: event.target.checked }))
           }
         />
-        Enable Sound
+        {messages.settings.soundEnabled}
       </label>
       <button
         className="settings-save"
         onClick={() => void onSave(formStateToSettings(form))}
       >
-        Save Settings
+        {messages.settings.save}
       </button>
     </section>
   );

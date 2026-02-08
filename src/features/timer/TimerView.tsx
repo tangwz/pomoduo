@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useI18n } from '../../i18n';
 import type { TimerSnapshot } from './types';
 
 interface TimerViewProps {
@@ -7,12 +8,6 @@ interface TimerViewProps {
   onResume: () => Promise<void>;
   onReset: () => Promise<void>;
 }
-
-const PHASE_LABELS: Record<TimerSnapshot['phase'], string> = {
-  focus: 'Focus',
-  shortBreak: 'Short Break',
-  longBreak: 'Long Break',
-};
 
 function phaseDurationMs(snapshot: TimerSnapshot): number {
   switch (snapshot.phase) {
@@ -40,6 +35,7 @@ export default function TimerView({
   onResume,
   onReset,
 }: TimerViewProps) {
+  const { messages } = useI18n();
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   const phaseDuration = Math.max(phaseDurationMs(snapshot), 1);
   const liveRemainingMs =
@@ -55,7 +51,11 @@ export default function TimerView({
   const ringRadius = 46;
   const ringCircumference = 2 * Math.PI * ringRadius;
   const ringVisibleLength = ringCircumference * elapsedRatio;
-  const actionLabel = snapshot.isRunning ? 'Abandon' : 'Start';
+  const actionLabel = snapshot.isRunning
+    ? messages.timer.actions.abandon
+    : isFreshPhase
+      ? messages.timer.actions.start
+      : messages.timer.actions.resume;
 
   useEffect(() => {
     setNowMs(Date.now());
@@ -88,7 +88,7 @@ export default function TimerView({
 
   return (
     <section className="timer-panel">
-      <div className="timer-phase">{PHASE_LABELS[snapshot.phase]}</div>
+      <div className="timer-phase">{messages.timer.phaseLabels[snapshot.phase]}</div>
       <div className="tomato-timer">
         <svg
           className="timer-ring"
@@ -115,8 +115,8 @@ export default function TimerView({
         </div>
       </div>
       <div className="timer-meta">
-        <span>Completed Focus: {snapshot.cycleCount}</span>
-        <span>Long Break Every: {snapshot.settings.longBreakEvery}</span>
+        <span>{messages.timer.completedFocus(snapshot.cycleCount)}</span>
+        <span>{messages.timer.longBreakEvery(snapshot.settings.longBreakEvery)}</span>
       </div>
       <div className="timer-actions timer-actions--single">
         <button
