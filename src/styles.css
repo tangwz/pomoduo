@@ -1,0 +1,146 @@
+:root {
+  font-family: 'Avenir Next', 'Segoe UI', sans-serif;
+  color: #0d1d26;
+  background: radial-gradient(circle at top left, #f8fcff, #d9e8ef 58%, #bfd2dd);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.app-shell {
+  width: min(640px, 100%);
+  min-height: 480px;
+  background: #ffffffd9;
+  border: 1px solid #d5e2ea;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px #1f3f5224;
+  padding: 20px;
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.top-bar h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.tabs {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.tabs button,
+.timer-actions button,
+.settings-save {
+  border: 1px solid #bfd0da;
+  border-radius: 10px;
+  background: #f6fbfe;
+  color: #0d1d26;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.tabs button.active,
+.timer-actions button:hover,
+.settings-save:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px #2648591f;
+  background: #dcecf4;
+}
+
+.timer-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.timer-phase {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.timer-countdown {
+  font-size: clamp(3.5rem, 8vw, 5.4rem);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-align: center;
+  line-height: 1;
+}
+
+.timer-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #44545d;
+  font-size: 0.95rem;
+}
+
+.timer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.settings-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.settings-grid label,
+.settings-toggle {
+  display: grid;
+  gap: 6px;
+  color: #24323a;
+}
+
+.settings-grid input {
+  border: 1px solid #bfd0da;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 1rem;
+}
+
+.settings-toggle {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+@media (max-width: 640px) {
+  .app-shell {
+    min-height: 100vh;
+    border-radius: 0;
+  }
+
+  #root {
+    padding: 0;
+  }
+
+  .timer-meta {
+    flex-direction: column;
+  }
+}
