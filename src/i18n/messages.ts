@@ -12,6 +12,8 @@ export interface I18nMessages {
     phaseLabels: Record<PhaseKey, string>;
     completedFocus: (count: number) => string;
     longBreakEvery: (value: number) => string;
+    progress: (completed: number, target: number) => string;
+    infoButtonLabel: string;
     actions: {
       start: string;
       resume: string;
@@ -46,6 +48,9 @@ export const MESSAGES: Record<LocaleCode, I18nMessages> = {
       },
       completedFocus: (count: number) => `Completed Focus: ${count}`,
       longBreakEvery: (value: number) => `Long Break Every: ${value}`,
+      progress: (completed: number, target: number) =>
+        `Progress to Long Break: ${completed}/${target}`,
+      infoButtonLabel: 'Show timer progress',
       actions: {
         start: 'Start',
         resume: 'Resume',
@@ -81,6 +86,9 @@ export const MESSAGES: Record<LocaleCode, I18nMessages> = {
       },
       completedFocus: (count: number) => `\u5DF2\u5B8C\u6210\u4E13\u6CE8\uFF1A${count}`,
       longBreakEvery: (value: number) => `\u957F\u4F11\u606F\u95F4\u9694\uFF1A${value}`,
+      progress: (completed: number, target: number) =>
+        `\u8DDD\u79BB\u957F\u4F11\u606F\u8FDB\u5EA6\uFF1A${completed}/${target}`,
+      infoButtonLabel: '\u67E5\u770B\u8BA1\u65F6\u8FDB\u5EA6',
       actions: {
         start: '\u5F00\u59CB',
         resume: '\u7EE7\u7EED',

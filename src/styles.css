@@ -46,6 +46,78 @@ body {
   font-size: 1.5rem;
 }
 
+.brand-block {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.info-popover {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.info-popover-button {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid #bfd0da;
+  background: #f6fbfe;
+  color: #12374d;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.info-popover-button:hover,
+.info-popover-button:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px #2648591f;
+  background: #dcecf4;
+}
+
+.info-popover-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  min-width: 230px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #bfd0da;
+  background: #ffffff;
+  box-shadow: 0 10px 20px #18242e1f;
+  display: grid;
+  gap: 4px;
+  color: #24323a;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-3px);
+  pointer-events: none;
+  transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease;
+  z-index: 8;
+}
+
+.info-popover-panel strong {
+  color: #12374d;
+  font-size: 0.94rem;
+}
+
+.info-popover-panel span {
+  font-size: 0.88rem;
+}
+
+.info-popover:hover .info-popover-panel,
+.info-popover:focus-within .info-popover-panel,
+.info-popover.is-open .info-popover-panel {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
 .tabs {
   display: inline-flex;
   gap: 8px;
@@ -76,7 +148,7 @@ body {
   width: min(920px, 100%);
   margin: 0 auto;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: clamp(16px, 2.3vh, 26px);
   justify-items: center;
@@ -170,15 +242,6 @@ body {
   place-items: center;
 }
 
-.timer-meta {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  color: #44545d;
-  font-size: clamp(0.95rem, 1.8vw, 1.05rem);
-  width: min(760px, 100%);
-}
-
 .timer-actions {
   display: flex;
   width: min(760px, 100%);
@@ -243,13 +306,11 @@ body {
 }
 
 @media (max-width: 720px) {
-  .timer-meta {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-
   .top-bar {
     gap: 12px;
+  }
+
+  .info-popover-panel {
+    left: -14px;
   }
 }

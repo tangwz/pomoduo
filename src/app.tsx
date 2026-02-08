@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   isPermissionGranted,
   requestPermission,
@@ -59,6 +59,72 @@ interface AppContentProps {
   onSaveSettings: (settings: Settings) => Promise<void>;
 }
 
+interface TimerInfoPopoverProps {
+  snapshot: TimerSnapshot;
+}
+
+function TimerInfoPopover({ snapshot }: TimerInfoPopoverProps) {
+  const { messages } = useI18n();
+  const [isOpen, setIsOpen] = useState(false);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!(event.target instanceof Node)) {
+        return;
+      }
+      if (!popoverRef.current?.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
+    window.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('keydown', handleEscape);
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen]);
+
+  return (
+    <div
+      className={`info-popover ${isOpen ? 'is-open' : ''}`}
+      ref={popoverRef}
+      onMouseLeave={() => setIsOpen(false)}
+    >
+      <button
+        type="button"
+        className="info-popover-button"
+        aria-label={messages.timer.infoButtonLabel}
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((prev) => !prev)}
+      >
+        i
+      </button>
+      <div className="info-popover-panel" role="tooltip">
+        <strong>
+          {messages.timer.progress(
+            snapshot.cycleCount,
+            snapshot.settings.longBreakEvery,
+          )}
+        </strong>
+        <span>{messages.timer.completedFocus(snapshot.cycleCount)}</span>
+        <span>{messages.timer.longBreakEvery(snapshot.settings.longBreakEvery)}</span>
+      </div>
+    </div>
+  );
+}
+
 function AppContent({
   tab,
   snapshot,
@@ -77,7 +143,10 @@ function AppContent({
   return (
     <main className="app-shell">
       <header className="top-bar">
-        <h1>Pomoduo</h1>
+        <div className="brand-block">
+          <h1>Pomoduo</h1>
+          <TimerInfoPopover snapshot={snapshot} />
+        </div>
         <nav className="tabs">
           <button
             className={tab === 'timer' ? 'active' : ''}

@@ -114,10 +114,6 @@ export default function TimerView({
           <div className="timer-countdown">{formatMs(liveRemainingMs)}</div>
         </div>
       </div>
-      <div className="timer-meta">
-        <span>{messages.timer.completedFocus(snapshot.cycleCount)}</span>
-        <span>{messages.timer.longBreakEvery(snapshot.settings.longBreakEvery)}</span>
-      </div>
       <div className="timer-actions timer-actions--single">
         <button
           className={`timer-primary ${
