@@ -49,7 +49,7 @@ body {
 }
 
 .tabs button,
-.timer-actions button,
+.timer-primary,
 .settings-save {
   border: 1px solid #bfd0da;
   border-radius: 10px;
@@ -61,7 +61,7 @@ body {
 }
 
 .tabs button.active,
-.timer-actions button:hover,
+.timer-primary:hover,
 .settings-save:hover {
   transform: translateY(-1px);
   box-shadow: 0 8px 16px #2648591f;
@@ -70,20 +70,96 @@ body {
 
 .timer-panel {
   display: grid;
-  gap: 16px;
+  gap: 18px;
+  justify-items: center;
 }
 
 .timer-phase {
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #2d4730;
 }
 
 .timer-countdown {
-  font-size: clamp(3.5rem, 8vw, 5.4rem);
+  font-size: clamp(2.5rem, 8vw, 4.8rem);
   font-weight: 700;
   letter-spacing: 0.05em;
   text-align: center;
   line-height: 1;
+  color: #fff6ea;
+}
+
+.tomato-timer {
+  position: relative;
+  width: min(78vw, 320px);
+  aspect-ratio: 1 / 1;
+  display: grid;
+  place-items: center;
+}
+
+.timer-ring {
+  position: absolute;
+  inset: 0;
+}
+
+.timer-ring-track,
+.timer-ring-value {
+  fill: none;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+
+.timer-ring-track {
+  stroke: #f2dfd8;
+  stroke-width: 5.5;
+}
+
+.timer-ring-value {
+  stroke: #ef7f69;
+  stroke-width: 5.5;
+  transition: stroke-dasharray 180ms linear;
+}
+
+.tomato-leaf {
+  position: absolute;
+  top: 9%;
+  width: 42%;
+  height: 16%;
+  display: flex;
+  justify-content: center;
+  gap: 8%;
+  z-index: 2;
+}
+
+.tomato-leaf span {
+  display: block;
+  width: 26%;
+  height: 100%;
+  border-radius: 999px 999px 160px 160px;
+  background: linear-gradient(180deg, #8ad45e, #5aa53b);
+}
+
+.tomato-leaf span:nth-child(1) {
+  transform: rotate(-32deg);
+}
+
+.tomato-leaf span:nth-child(2) {
+  transform: translateY(22%);
+}
+
+.tomato-leaf span:nth-child(3) {
+  transform: rotate(32deg);
+}
+
+.tomato-core {
+  width: 79%;
+  aspect-ratio: 1 / 1;
+  border-radius: 999px;
+  background: radial-gradient(circle at 28% 23%, #f69e82, #e76a53 72%);
+  box-shadow: inset 0 -12px 0 #d45d4c, inset 0 10px 24px #ffffff2e;
+  display: grid;
+  place-items: center;
 }
 
 .timer-meta {
@@ -92,12 +168,34 @@ body {
   gap: 12px;
   color: #44545d;
   font-size: 0.95rem;
+  width: 100%;
 }
 
 .timer-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  width: 100%;
+}
+
+.timer-actions--single {
+  justify-content: center;
+}
+
+.timer-primary {
+  min-width: 160px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.timer-primary--start {
+  background: linear-gradient(180deg, #e8f8eb, #d1f1d7);
+  border-color: #9dd2aa;
+  color: #134d1f;
+}
+
+.timer-primary--danger {
+  background: linear-gradient(180deg, #ffe5e0, #ffd5ce);
+  border-color: #e7ada2;
+  color: #7a1f15;
 }
 
 .settings-panel {

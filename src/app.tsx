@@ -9,10 +9,8 @@ import {
   listenPhaseCompleted,
   listenTimerTick,
   timerGetState,
-  timerPause,
   timerReset,
   timerResume,
-  timerSkip,
   timerStart,
   timerUpdateSettings,
 } from './features/timer/timerEvents';
@@ -91,9 +89,7 @@ export default function App() {
   const actions = useMemo(
     () => ({
       start: async () => setSnapshot(await timerStart()),
-      pause: async () => setSnapshot(await timerPause()),
       resume: async () => setSnapshot(await timerResume()),
-      skip: async () => setSnapshot(await timerSkip()),
       reset: async () => setSnapshot(await timerReset()),
       saveSettings: async (settings: Settings) =>
         setSnapshot(await timerUpdateSettings(settings)),
@@ -129,9 +125,7 @@ export default function App() {
         <TimerView
           snapshot={snapshot}
           onStart={actions.start}
-          onPause={actions.pause}
           onResume={actions.resume}
-          onSkip={actions.skip}
           onReset={actions.reset}
         />
       ) : (
