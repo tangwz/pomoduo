@@ -1,7 +1,7 @@
 :root {
   font-family: 'Avenir Next', 'Segoe UI', sans-serif;
   color: #0d1d26;
-  background: radial-gradient(circle at top left, #f8fcff, #d9e8ef 58%, #bfd2dd);
+  background: #ffffff;
 }
 
 * {
@@ -11,23 +11,26 @@
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
+  background: #ffffff;
 }
 
 #root {
   min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 24px;
+  min-height: 100dvh;
+  width: 100%;
 }
 
 .app-shell {
-  width: min(640px, 100%);
-  min-height: 480px;
-  background: #ffffffd9;
-  border: 1px solid #d5e2ea;
-  border-radius: 16px;
-  box-shadow: 0 20px 40px #1f3f5224;
-  padding: 20px;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: clamp(16px, 3vw, 28px) clamp(16px, 4vw, 42px)
+    clamp(20px, 4vh, 36px);
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(14px, 2vh, 24px);
 }
 
 .top-bar {
@@ -35,7 +38,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
 .top-bar h1 {
@@ -69,19 +72,24 @@ body {
 }
 
 .timer-panel {
+  flex: 1;
+  width: min(920px, 100%);
+  margin: 0 auto;
   display: grid;
-  gap: 18px;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: clamp(16px, 2.3vh, 26px);
   justify-items: center;
 }
 
 .timer-phase {
-  font-size: 1.35rem;
+  font-size: clamp(1.35rem, 2.6vw, 2rem);
   font-weight: 700;
   color: #2d4730;
 }
 
 .timer-countdown {
-  font-size: clamp(2.5rem, 8vw, 4.8rem);
+  font-size: clamp(2.4rem, 8.8vmin, 5.8rem);
   font-weight: 700;
   letter-spacing: 0.05em;
   text-align: center;
@@ -91,7 +99,7 @@ body {
 
 .tomato-timer {
   position: relative;
-  width: min(78vw, 320px);
+  width: clamp(220px, 48vmin, 470px);
   aspect-ratio: 1 / 1;
   display: grid;
   place-items: center;
@@ -167,13 +175,13 @@ body {
   justify-content: space-between;
   gap: 12px;
   color: #44545d;
-  font-size: 0.95rem;
-  width: 100%;
+  font-size: clamp(0.95rem, 1.8vw, 1.05rem);
+  width: min(760px, 100%);
 }
 
 .timer-actions {
   display: flex;
-  width: 100%;
+  width: min(760px, 100%);
 }
 
 .timer-actions--single {
@@ -199,8 +207,11 @@ body {
 }
 
 .settings-panel {
+  width: min(920px, 100%);
+  margin: 0 auto;
   display: grid;
   gap: 14px;
+  align-content: start;
 }
 
 .settings-grid {
@@ -228,17 +239,14 @@ body {
   align-items: center;
 }
 
-@media (max-width: 640px) {
-  .app-shell {
-    min-height: 100vh;
-    border-radius: 0;
-  }
-
-  #root {
-    padding: 0;
-  }
-
+@media (max-width: 720px) {
   .timer-meta {
     flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .top-bar {
+    gap: 12px;
   }
 }
