@@ -1,6 +1,7 @@
 import type { LocaleCode } from './locale';
 
 type PhaseKey = 'focus' | 'shortBreak' | 'longBreak';
+type PeriodKey = 'daily' | 'weekly' | 'monthly';
 
 export interface I18nMessages {
   loading: string;
@@ -21,6 +22,7 @@ export interface I18nMessages {
     };
   };
   settings: {
+    generalTitle: string;
     focusMinutes: string;
     shortBreakMinutes: string;
     longBreakMinutes: string;
@@ -30,6 +32,48 @@ export interface I18nMessages {
     soundEnabled: string;
     save: string;
     languageOptions: Record<LocaleCode, string>;
+    goalsTitle: string;
+    goalsLoading: string;
+    goalPeriods: Record<PeriodKey, string>;
+    focusTarget: string;
+    longCycleTarget: string;
+    saveGoals: string;
+  };
+  insights: {
+    triggerLabel: string;
+    openButtonLabel: string;
+    drawerTitle: string;
+    closeButtonLabel: string;
+    loading: string;
+    statsTitle: string;
+    heatmapTitle: string;
+    heatmapLegendLess: string;
+    heatmapLegendMore: string;
+    weekStart: string;
+    periods: Record<PeriodKey, string>;
+    dimension: Record<PeriodKey, string>;
+    focusCompleted: string;
+    longCycleCompleted: string;
+    focusTarget: string;
+    longCycleTarget: string;
+    focusRate: string;
+    longCycleRate: string;
+    goalCompleted: string;
+    goalInProgress: string;
+    chartTitle: string;
+    chartEmpty: string;
+    chartHint: string;
+    chartTooltip: (
+      label: string,
+      focusCompleted: number,
+      longCycleCompleted: number,
+    ) => string;
+    series: {
+      focus: string;
+      longCycle: string;
+    };
+    goalsTitle: string;
+    saveGoals: string;
   };
 }
 
@@ -58,6 +102,7 @@ export const MESSAGES: Record<LocaleCode, I18nMessages> = {
       },
     },
     settings: {
+      generalTitle: 'Timer Settings',
       focusMinutes: 'Focus (minutes)',
       shortBreakMinutes: 'Short Break (minutes)',
       longBreakMinutes: 'Long Break (minutes)',
@@ -68,46 +113,155 @@ export const MESSAGES: Record<LocaleCode, I18nMessages> = {
       save: 'Save Settings',
       languageOptions: {
         'en-US': 'English',
-        'zh-CN': '\u7B80\u4F53\u4E2D\u6587',
+        'zh-CN': '简体中文',
       },
+      goalsTitle: 'Goals',
+      goalsLoading: 'Loading goals...',
+      goalPeriods: {
+        daily: 'Daily',
+        weekly: 'Weekly',
+        monthly: 'Monthly',
+      },
+      focusTarget: 'Focus Target',
+      longCycleTarget: 'Long Cycle Target',
+      saveGoals: 'Save Goals',
+    },
+    insights: {
+      triggerLabel: 'Insights',
+      openButtonLabel: 'Open productivity stats',
+      drawerTitle: 'Productivity Stats',
+      closeButtonLabel: 'Close stats drawer',
+      loading: 'Loading insights...',
+      statsTitle: 'Stats',
+      heatmapTitle: 'Last 53 Weeks',
+      heatmapLegendLess: 'Less',
+      heatmapLegendMore: 'More',
+      weekStart: 'Week starts on Sunday.',
+      periods: {
+        daily: 'Daily',
+        weekly: 'Weekly',
+        monthly: 'Monthly',
+      },
+      dimension: {
+        daily: 'Daily',
+        weekly: 'Weekly',
+        monthly: 'Monthly',
+      },
+      focusCompleted: 'Focus Completed',
+      longCycleCompleted: 'Long Cycles Completed',
+      focusTarget: 'Focus Target',
+      longCycleTarget: 'Long Cycle Target',
+      focusRate: 'Focus Completion',
+      longCycleRate: 'Long Cycle Completion',
+      goalCompleted: 'Goal Completed',
+      goalInProgress: 'In Progress',
+      chartTitle: 'Trend Chart',
+      chartEmpty: 'No chart data',
+      chartHint: 'Hover points to view values.',
+      chartTooltip: (
+        label: string,
+        focusCompleted: number,
+        longCycleCompleted: number,
+      ) => `${label} | Focus: ${focusCompleted}, Long-cycle: ${longCycleCompleted}`,
+      series: {
+        focus: 'Focus',
+        longCycle: 'Long-cycle',
+      },
+      goalsTitle: 'Goals',
+      saveGoals: 'Save Goals',
     },
   },
   'zh-CN': {
-    loading: '\u52A0\u8F7D\u4E2D...',
+    loading: '加载中...',
     tabs: {
-      timer: '\u8BA1\u65F6',
-      settings: '\u8BBE\u7F6E',
+      timer: '计时',
+      settings: '设置',
     },
     timer: {
       phaseLabels: {
-        focus: '\u4E13\u6CE8',
-        shortBreak: '\u77ED\u4F11\u606F',
-        longBreak: '\u957F\u4F11\u606F',
+        focus: '专注',
+        shortBreak: '短休息',
+        longBreak: '长休息',
       },
-      completedFocus: (count: number) => `\u5DF2\u5B8C\u6210\u4E13\u6CE8\uFF1A${count}`,
-      longBreakEvery: (value: number) => `\u957F\u4F11\u606F\u95F4\u9694\uFF1A${value}`,
+      completedFocus: (count: number) => `已完成专注：${count}`,
+      longBreakEvery: (value: number) => `长休息间隔：${value}`,
       progress: (completed: number, target: number) =>
-        `\u8DDD\u79BB\u957F\u4F11\u606F\u8FDB\u5EA6\uFF1A${completed}/${target}`,
-      infoButtonLabel: '\u67E5\u770B\u8BA1\u65F6\u8FDB\u5EA6',
+        `距离长休息进度：${completed}/${target}`,
+      infoButtonLabel: '查看计时进度',
       actions: {
-        start: '\u5F00\u59CB',
-        resume: '\u7EE7\u7EED',
-        abandon: '\u653E\u5F03',
+        start: '开始',
+        resume: '继续',
+        abandon: '放弃',
       },
     },
     settings: {
-      focusMinutes: '\u4E13\u6CE8\uFF08\u5206\u949F\uFF09',
-      shortBreakMinutes: '\u77ED\u4F11\u606F\uFF08\u5206\u949F\uFF09',
-      longBreakMinutes: '\u957F\u4F11\u606F\uFF08\u5206\u949F\uFF09',
-      longBreakEvery: '\u957F\u4F11\u606F\u95F4\u9694',
-      language: '\u8BED\u8A00',
-      notifyEnabled: '\u542F\u7528\u7CFB\u7EDF\u901A\u77E5',
-      soundEnabled: '\u542F\u7528\u63D0\u793A\u97F3',
-      save: '\u4FDD\u5B58\u8BBE\u7F6E',
+      generalTitle: '计时设置',
+      focusMinutes: '专注（分钟）',
+      shortBreakMinutes: '短休息（分钟）',
+      longBreakMinutes: '长休息（分钟）',
+      longBreakEvery: '长休息间隔',
+      language: '语言',
+      notifyEnabled: '启用系统通知',
+      soundEnabled: '启用提示音',
+      save: '保存设置',
       languageOptions: {
         'en-US': 'English',
-        'zh-CN': '\u7B80\u4F53\u4E2D\u6587',
+        'zh-CN': '简体中文',
       },
+      goalsTitle: '目标',
+      goalsLoading: '正在加载目标...',
+      goalPeriods: {
+        daily: '每日',
+        weekly: '每周',
+        monthly: '每月',
+      },
+      focusTarget: '专注目标',
+      longCycleTarget: '长循环目标',
+      saveGoals: '保存目标',
+    },
+    insights: {
+      triggerLabel: '统计',
+      openButtonLabel: '打开统计',
+      drawerTitle: '统计',
+      closeButtonLabel: '关闭统计抽屉',
+      loading: '正在加载统计数据...',
+      statsTitle: '统计',
+      heatmapTitle: '最近 53 周',
+      heatmapLegendLess: '少',
+      heatmapLegendMore: '多',
+      weekStart: '每周从周一开始。',
+      periods: {
+        daily: '每日',
+        weekly: '每周',
+        monthly: '每月',
+      },
+      dimension: {
+        daily: '每日',
+        weekly: '每周',
+        monthly: '每月',
+      },
+      focusCompleted: '已完成专注',
+      longCycleCompleted: '已完成长循环',
+      focusTarget: '专注目标',
+      longCycleTarget: '长循环目标',
+      focusRate: '专注完成率',
+      longCycleRate: '长循环完成率',
+      goalCompleted: '已达成',
+      goalInProgress: '进行中',
+      chartTitle: '趋势图',
+      chartEmpty: '暂无图表数据',
+      chartHint: '悬停数据点可查看数值。',
+      chartTooltip: (
+        label: string,
+        focusCompleted: number,
+        longCycleCompleted: number,
+      ) => `${label} | 专注: ${focusCompleted}，长循环: ${longCycleCompleted}`,
+      series: {
+        focus: '专注',
+        longCycle: '长循环',
+      },
+      goalsTitle: '目标',
+      saveGoals: '保存目标',
     },
   },
 };

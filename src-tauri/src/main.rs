@@ -1,9 +1,13 @@
+mod analytics;
 mod commands;
 mod storage;
 mod system;
 mod timer;
 
-use commands::{timer_get_state, timer_reset, timer_resume, timer_start, timer_update_settings};
+use commands::{
+    timer_get_insights, timer_get_state, timer_reset, timer_resume, timer_start,
+    timer_update_goals, timer_update_settings,
+};
 use storage::state_file::StateFileStore;
 use system::notify::Notifier;
 use tauri::Manager;
@@ -27,6 +31,8 @@ fn main() {
             timer_resume,
             timer_reset,
             timer_update_settings,
+            timer_get_insights,
+            timer_update_goals,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

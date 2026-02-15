@@ -1,3 +1,8 @@
+use crate::analytics::model::{AnalyticsState, GoalSettings, InsightsSnapshot};
+use crate::analytics::service::{
+    build_insights_snapshot, current_local_date, record_focus_completion,
+    update_goals as update_goal_settings,
+};
 use crate::storage::state_file::StateFileStore;
 use crate::system::notify::Notifier;
 use serde::{Deserialize, Serialize};
@@ -249,6 +254,7 @@ impl TimerState {
 #[derive(Clone)]
 pub struct TimerEngine {
     state: Arc<Mutex<TimerState>>,
+    analytics: Arc<Mutex<AnalyticsState>>,
     storage: StateFileStore,
     notifier: Notifier,
     worker_started: Arc<AtomicBool>,
@@ -258,10 +264,15 @@ impl TimerEngine {
     pub fn new(storage: StateFileStore, notifier: Notifier) -> Self {
         let settings = storage.load_settings().unwrap_or_default().sanitized();
         let runtime_state = storage.load_runtime_state();
+        let analytics_state = storage
+            .load_analytics_state()
+            .unwrap_or_default()
+            .sanitized();
         let timer_state = TimerState::from_storage(settings, runtime_state);
 
         let engine = Self {
             state: Arc::new(Mutex::new(timer_state)),
+            analytics: Arc::new(Mutex::new(analytics_state)),
             storage,
             notifier,
             worker_started: Arc::new(AtomicBool::new(false)),
@@ -276,6 +287,14 @@ impl TimerEngine {
             end_at_ms: snapshot.end_at_ms,
             remaining_ms: snapshot.remaining_ms,
         });
+        let analytics_snapshot = {
+            let analytics = engine
+                .analytics
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            analytics.clone()
+        };
+        let _ = engine.persist_analytics_state(&analytics_snapshot);
 
         engine
     }
@@ -299,6 +318,53 @@ impl TimerEngine {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
         state.snapshot(now)
+    }
+
+    pub fn get_insights(&self) -> InsightsSnapshot {
+        let locale = {
+            let state = self
+                .state
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            state.settings.locale.clone()
+        };
+
+        let analytics_state = {
+            let analytics = self
+                .analytics
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            analytics.clone()
+        };
+
+        build_insights_snapshot(&analytics_state, &locale, current_local_date())
+    }
+
+    pub fn update_goals(&self, goals: GoalSettings) -> Result<InsightsSnapshot, String> {
+        let locale = {
+            let state = self
+                .state
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            state.settings.locale.clone()
+        };
+
+        let snapshot = {
+            let mut analytics = self
+                .analytics
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            update_goal_settings(&mut analytics, goals);
+            analytics.clone()
+        };
+
+        self.persist_analytics_state(&snapshot)?;
+
+        Ok(build_insights_snapshot(
+            &snapshot,
+            &locale,
+            current_local_date(),
+        ))
     }
 
     pub fn start(&self) -> Result<TimerSnapshot, String> {
@@ -430,6 +496,29 @@ impl TimerEngine {
         let _ = app.emit("timer_tick", tick_snapshot);
 
         if let Some(completion) = completed {
+            let mut productivity_snapshot = None;
+            if completion.finished_phase == Phase::Focus {
+                let today = current_local_date();
+                let completed_long_cycle = completion.next_phase == Phase::LongBreak;
+
+                let next_snapshot = {
+                    let mut analytics = self
+                        .analytics
+                        .lock()
+                        .unwrap_or_else(|poisoned| poisoned.into_inner());
+                    record_focus_completion(&mut analytics, today, completed_long_cycle);
+                    analytics.clone()
+                };
+
+                if self.persist_analytics_state(&next_snapshot).is_ok() {
+                    productivity_snapshot = Some(build_insights_snapshot(
+                        &next_snapshot,
+                        &completion.locale,
+                        today,
+                    ));
+                }
+            }
+
             if completion.notify_enabled {
                 self.notifier.notify_phase_transition(
                     app,
@@ -447,6 +536,10 @@ impl TimerEngine {
                     sound_enabled: completion.sound_enabled,
                 },
             );
+
+            if let Some(snapshot) = productivity_snapshot {
+                let _ = app.emit("productivity_updated", snapshot);
+            }
         }
     }
 
@@ -460,6 +553,12 @@ impl TimerEngine {
         self.storage
             .save_runtime_state(runtime_state)
             .map_err(|err| format!("failed to save runtime state: {err}"))
+    }
+
+    fn persist_analytics_state(&self, analytics_state: &AnalyticsState) -> Result<(), String> {
+        self.storage
+            .save_analytics_state(analytics_state)
+            .map_err(|err| format!("failed to save analytics state: {err}"))
     }
 }
 
@@ -622,6 +721,48 @@ mod tests {
         assert_eq!(state.end_at_ms, None);
         assert_eq!(state.remaining_ms, settings.long_break_ms);
         assert_eq!(state.cycle_count, 5);
+    }
+
+    #[test]
+    fn complete_focus_on_long_break_boundary_marks_next_phase_correctly() {
+        let settings = sample_settings();
+        let runtime = RuntimeState {
+            phase: Phase::Focus,
+            is_running: false,
+            cycle_count: 3,
+            end_at_ms: None,
+            remaining_ms: settings.focus_ms,
+        };
+
+        let mut state = TimerState::from_storage_at(settings.clone(), Some(runtime), TEST_NOW_MS);
+        let completion = state.complete_current_phase();
+
+        assert_eq!(completion.finished_phase, Phase::Focus);
+        assert_eq!(completion.next_phase, Phase::LongBreak);
+        assert_eq!(state.cycle_count, 4);
+        assert_eq!(state.phase, Phase::LongBreak);
+        assert_eq!(state.remaining_ms, settings.long_break_ms);
+    }
+
+    #[test]
+    fn complete_focus_before_boundary_enters_short_break() {
+        let settings = sample_settings();
+        let runtime = RuntimeState {
+            phase: Phase::Focus,
+            is_running: false,
+            cycle_count: 1,
+            end_at_ms: None,
+            remaining_ms: settings.focus_ms,
+        };
+
+        let mut state = TimerState::from_storage_at(settings.clone(), Some(runtime), TEST_NOW_MS);
+        let completion = state.complete_current_phase();
+
+        assert_eq!(completion.finished_phase, Phase::Focus);
+        assert_eq!(completion.next_phase, Phase::ShortBreak);
+        assert_eq!(state.cycle_count, 2);
+        assert_eq!(state.phase, Phase::ShortBreak);
+        assert_eq!(state.remaining_ms, settings.short_break_ms);
     }
 
     #[test]

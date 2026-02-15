@@ -3,6 +3,13 @@ import {
   isPermissionGranted,
   requestPermission,
 } from '@tauri-apps/plugin-notification';
+import InsightsDrawer from './features/insights/InsightsDrawer';
+import {
+  listenProductivityUpdated,
+  timerGetInsights,
+  timerUpdateGoals,
+} from './features/insights/insightsEvents';
+import type { GoalSettings, InsightsSnapshot } from './features/insights/types';
 import SettingsView from './features/settings/SettingsView';
 import TimerView from './features/timer/TimerView';
 import { detectPreferredLocale, I18nProvider, useI18n } from './i18n';
@@ -58,13 +65,20 @@ function playBeep(): void {
 interface AppContentProps {
   tab: ActiveTab;
   snapshot: TimerSnapshot | null;
+  insightsSnapshot: InsightsSnapshot | null;
   isBusy: boolean;
+  isGoalBusy: boolean;
   errorMessage: string | null;
+  insightsErrorMessage: string | null;
+  isInsightsOpen: boolean;
   onSwitchTab: (tab: ActiveTab) => void;
   onStart: () => Promise<void>;
   onResume: () => Promise<void>;
   onReset: () => Promise<void>;
   onSaveSettings: (settings: Settings) => Promise<void>;
+  onOpenInsights: () => void;
+  onCloseInsights: () => void;
+  onSaveGoals: (goals: GoalSettings) => Promise<void>;
 }
 
 interface TimerInfoPopoverProps {
@@ -136,13 +150,20 @@ function TimerInfoPopover({ snapshot }: TimerInfoPopoverProps) {
 function AppContent({
   tab,
   snapshot,
+  insightsSnapshot,
   isBusy,
+  isGoalBusy,
   errorMessage,
+  insightsErrorMessage,
+  isInsightsOpen,
   onSwitchTab,
   onStart,
   onResume,
   onReset,
   onSaveSettings,
+  onOpenInsights,
+  onCloseInsights,
+  onSaveGoals,
 }: AppContentProps) {
   const { messages } = useI18n();
 
@@ -161,22 +182,32 @@ function AppContent({
           <h1>Pomoduo</h1>
           <TimerInfoPopover snapshot={snapshot} />
         </div>
-        <nav className="tabs">
+        <div className="top-actions">
+          <nav className="tabs">
+            <button
+              className={tab === 'timer' ? 'active' : ''}
+              disabled={isBusy}
+              onClick={() => onSwitchTab('timer')}
+            >
+              {messages.tabs.timer}
+            </button>
+            <button
+              className={tab === 'settings' ? 'active' : ''}
+              disabled={isBusy}
+              onClick={() => onSwitchTab('settings')}
+            >
+              {messages.tabs.settings}
+            </button>
+          </nav>
           <button
-            className={tab === 'timer' ? 'active' : ''}
-            disabled={isBusy}
-            onClick={() => onSwitchTab('timer')}
+            type="button"
+            className="insights-trigger"
+            aria-label={messages.insights.openButtonLabel}
+            onClick={onOpenInsights}
           >
-            {messages.tabs.timer}
+            ▦ {messages.insights.triggerLabel}
           </button>
-          <button
-            className={tab === 'settings' ? 'active' : ''}
-            disabled={isBusy}
-            onClick={() => onSwitchTab('settings')}
-          >
-            {messages.tabs.settings}
-          </button>
-        </nav>
+        </div>
       </header>
       {errorMessage ? (
         <p className="app-error" role="alert">
@@ -193,8 +224,22 @@ function AppContent({
           onReset={onReset}
         />
       ) : (
-        <SettingsView settings={snapshot.settings} isBusy={isBusy} onSave={onSaveSettings} />
+        <SettingsView
+          settings={snapshot.settings}
+          goals={insightsSnapshot?.goals ?? null}
+          isBusy={isBusy}
+          isGoalBusy={isGoalBusy}
+          onSave={onSaveSettings}
+          onSaveGoals={onSaveGoals}
+        />
       )}
+
+      <InsightsDrawer
+        isOpen={isInsightsOpen}
+        snapshot={insightsSnapshot}
+        errorMessage={insightsErrorMessage}
+        onClose={onCloseInsights}
+      />
     </main>
   );
 }
@@ -202,6 +247,7 @@ function AppContent({
 interface SnapshotActionResult {
   snapshot: TimerSnapshot;
   warningMessage?: string | null;
+  insightsSnapshot?: InsightsSnapshot;
 }
 
 function formatErrorMessage(error: unknown): string {
@@ -217,8 +263,14 @@ function formatErrorMessage(error: unknown): string {
 export default function App() {
   const [tab, setTab] = useState<ActiveTab>('timer');
   const [snapshot, setSnapshot] = useState<TimerSnapshot | null>(null);
+  const [insightsSnapshot, setInsightsSnapshot] = useState<InsightsSnapshot | null>(
+    null,
+  );
   const [isBusy, setIsBusy] = useState(false);
+  const [isGoalBusy, setIsGoalBusy] = useState(false);
+  const [isInsightsOpen, setIsInsightsOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [insightsErrorMessage, setInsightsErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -226,9 +278,13 @@ export default function App() {
 
     const init = async () => {
       try {
-        const initialState = await timerGetState();
+        const [initialState, initialInsights] = await Promise.all([
+          timerGetState(),
+          timerGetInsights(),
+        ]);
         if (mounted) {
           setSnapshot(initialState);
+          setInsightsSnapshot(initialInsights);
         }
 
         const unlistenTick = await listenTimerTick((nextSnapshot) => {
@@ -244,9 +300,21 @@ export default function App() {
           }
         });
         cleanups.push(unlistenCompleted);
+
+        const unlistenProductivity = await listenProductivityUpdated(
+          (nextInsights) => {
+            if (mounted) {
+              setInsightsSnapshot(nextInsights);
+              setInsightsErrorMessage(null);
+            }
+          },
+        );
+        cleanups.push(unlistenProductivity);
       } catch (error) {
         if (mounted) {
-          setErrorMessage(formatErrorMessage(error));
+          const message = formatErrorMessage(error);
+          setErrorMessage(message);
+          setInsightsErrorMessage(message);
         }
       }
     };
@@ -270,6 +338,10 @@ export default function App() {
       try {
         const result = await operation();
         setSnapshot(result.snapshot);
+        if (result.insightsSnapshot) {
+          setInsightsSnapshot(result.insightsSnapshot);
+          setInsightsErrorMessage(null);
+        }
         if (result.warningMessage) {
           setErrorMessage(result.warningMessage);
         }
@@ -325,10 +397,37 @@ export default function App() {
         }
 
         const nextSnapshot = await timerUpdateSettings(settingsToSave);
-        return { snapshot: nextSnapshot, warningMessage };
+        const nextInsights = await timerGetInsights();
+        return {
+          snapshot: nextSnapshot,
+          warningMessage,
+          insightsSnapshot: nextInsights,
+        };
       });
     },
     [executeSnapshotAction, snapshot?.settings.notifyEnabled],
+  );
+
+  const handleSaveGoals = useCallback(
+    async (goals: GoalSettings) => {
+      if (isGoalBusy) {
+        return;
+      }
+
+      setIsGoalBusy(true);
+      setErrorMessage(null);
+      try {
+        const nextInsights = await timerUpdateGoals(goals);
+        setInsightsSnapshot(nextInsights);
+      } catch (error) {
+        const message = formatErrorMessage(error);
+        setErrorMessage(message);
+        setInsightsErrorMessage(message);
+      } finally {
+        setIsGoalBusy(false);
+      }
+    },
+    [isGoalBusy],
   );
 
   const locale = snapshot?.settings.locale ?? detectPreferredLocale();
@@ -338,13 +437,20 @@ export default function App() {
       <AppContent
         tab={tab}
         snapshot={snapshot}
+        insightsSnapshot={insightsSnapshot}
         isBusy={isBusy}
+        isGoalBusy={isGoalBusy}
         errorMessage={errorMessage}
+        insightsErrorMessage={insightsErrorMessage}
+        isInsightsOpen={isInsightsOpen}
         onSwitchTab={setTab}
         onStart={handleStart}
         onResume={handleResume}
         onReset={handleReset}
         onSaveSettings={handleSaveSettings}
+        onOpenInsights={() => setIsInsightsOpen(true)}
+        onCloseInsights={() => setIsInsightsOpen(false)}
+        onSaveGoals={handleSaveGoals}
       />
     </I18nProvider>
   );

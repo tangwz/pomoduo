@@ -1,3 +1,4 @@
+use crate::analytics::model::AnalyticsState;
 use crate::timer::engine::{RuntimeState, Settings};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -38,6 +39,14 @@ impl StateFileStore {
         self.save_json(self.runtime_state_file(), runtime_state)
     }
 
+    pub fn load_analytics_state(&self) -> Option<AnalyticsState> {
+        self.load_json::<AnalyticsState>(self.analytics_state_file())
+    }
+
+    pub fn save_analytics_state(&self, analytics_state: &AnalyticsState) -> io::Result<()> {
+        self.save_json(self.analytics_state_file(), analytics_state)
+    }
+
     fn load_json<T: DeserializeOwned>(&self, path: PathBuf) -> Option<T> {
         if !path.exists() {
             return None;
@@ -74,6 +83,10 @@ impl StateFileStore {
 
     fn runtime_state_file(&self) -> PathBuf {
         self.base_dir.join("runtime_state.json")
+    }
+
+    fn analytics_state_file(&self) -> PathBuf {
+        self.base_dir.join("analytics_state.json")
     }
 }
 
