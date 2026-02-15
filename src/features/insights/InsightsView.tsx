@@ -202,27 +202,6 @@ export default function InsightsView({ snapshot, errorMessage }: InsightsViewPro
       ) : (
         <section className="insights-page-card">
           <section className="insights-section">
-            <div className="insights-stats-head">
-              <h3>{messages.insights.statsTitle}</h3>
-              <div
-                className="insights-dimension-switch"
-                role="tablist"
-                aria-label={messages.insights.chartTitle}
-              >
-                {DIMENSION_ORDER.map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    role="tab"
-                    aria-selected={dimension === item}
-                    className={dimension === item ? 'is-active' : ''}
-                    onClick={() => setDimension(item)}
-                  >
-                    {messages.insights.dimension[item]}
-                  </button>
-                ))}
-              </div>
-            </div>
             <p className="insights-week-start">{messages.insights.weekStart}</p>
             <div className="insights-heatmap-wrap">
               <div className="insights-heatmap-title">{messages.insights.heatmapTitle}</div>
@@ -251,7 +230,27 @@ export default function InsightsView({ snapshot, errorMessage }: InsightsViewPro
             </div>
 
             <div className="insights-chart-card">
-              <h4>{messages.insights.chartTitle}</h4>
+              <div className="insights-chart-head">
+                <h4>{messages.insights.chartTitle}</h4>
+                <div
+                  className="insights-dimension-switch"
+                  role="tablist"
+                  aria-label={messages.insights.chartTitle}
+                >
+                  {DIMENSION_ORDER.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      role="tab"
+                      aria-selected={dimension === item}
+                      className={dimension === item ? 'is-active' : ''}
+                      onClick={() => setDimension(item)}
+                    >
+                      {messages.insights.dimension[item]}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <TrendLineChart points={trendSeries} dimension={dimension} />
             </div>
           </section>

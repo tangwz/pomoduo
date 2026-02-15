@@ -15,6 +15,8 @@ export interface I18nMessages {
     completedFocus: (count: number) => string;
     longBreakEvery: (value: number) => string;
     progress: (completed: number, target: number) => string;
+    dailyGoalProgress: (completed: number, target: number) => string;
+    dailyGoalPercent: (value: number) => string;
     infoButtonLabel: string;
     actions: {
       start: string;
@@ -36,6 +38,7 @@ export interface I18nMessages {
     languageOptions: Record<LocaleCode, string>;
     goalsTitle: string;
     goalsLoading: string;
+    dailyPomodoroTarget: string;
     goalPeriods: Record<PeriodKey, string>;
     focusTarget: string;
     longCycleTarget: string;
@@ -97,6 +100,9 @@ export const MESSAGES: Record<LocaleCode, I18nMessages> = {
       longBreakEvery: (value: number) => `Long Break Every: ${value}`,
       progress: (completed: number, target: number) =>
         `Progress to Long Break: ${completed}/${target}`,
+      dailyGoalProgress: (completed: number, target: number) =>
+        `Daily Goal: ${completed}/${target}`,
+      dailyGoalPercent: (value: number) => `Completion: ${value}%`,
       infoButtonLabel: 'Show timer progress',
       actions: {
         start: 'Start',
@@ -119,8 +125,9 @@ export const MESSAGES: Record<LocaleCode, I18nMessages> = {
         'en-US': 'English',
         'zh-CN': '简体中文',
       },
-      goalsTitle: 'Goals',
+      goalsTitle: 'Goal',
       goalsLoading: 'Loading goals...',
+      dailyPomodoroTarget: 'Daily Pomodoro Target',
       goalPeriods: {
         daily: 'Daily',
         weekly: 'Weekly',
@@ -192,6 +199,9 @@ export const MESSAGES: Record<LocaleCode, I18nMessages> = {
       longBreakEvery: (value: number) => `长休息间隔：${value}`,
       progress: (completed: number, target: number) =>
         `距离长休息进度：${completed}/${target}`,
+      dailyGoalProgress: (completed: number, target: number) =>
+        `每日目标：${completed}/${target}`,
+      dailyGoalPercent: (value: number) => `完成度：${value}%`,
       infoButtonLabel: '查看计时进度',
       actions: {
         start: '开始',
@@ -216,6 +226,7 @@ export const MESSAGES: Record<LocaleCode, I18nMessages> = {
       },
       goalsTitle: '目标',
       goalsLoading: '正在加载目标...',
+      dailyPomodoroTarget: '每日番茄目标',
       goalPeriods: {
         daily: '每日',
         weekly: '每周',

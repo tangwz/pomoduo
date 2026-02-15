@@ -80,12 +80,19 @@ interface AppContentProps {
 
 interface TimerInfoPopoverProps {
   snapshot: TimerSnapshot;
+  insightsSnapshot: InsightsSnapshot | null;
 }
 
-function TimerInfoPopover({ snapshot }: TimerInfoPopoverProps) {
+function TimerInfoPopover({ snapshot, insightsSnapshot }: TimerInfoPopoverProps) {
   const { messages } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement | null>(null);
+  const dailyFocusCompleted = insightsSnapshot?.summaries.daily.focusCompleted ?? 0;
+  const dailyFocusTarget = Math.max(insightsSnapshot?.goals.daily.focusTarget ?? 1, 1);
+  const dailyGoalPercent = Math.min(
+    100,
+    Math.round((dailyFocusCompleted / dailyFocusTarget) * 100),
+  );
 
   useEffect(() => {
     if (!isOpen) {
@@ -132,6 +139,23 @@ function TimerInfoPopover({ snapshot }: TimerInfoPopoverProps) {
       </button>
       <div className="info-popover-panel" role="tooltip">
         <strong>
+          {messages.timer.dailyGoalProgress(dailyFocusCompleted, dailyFocusTarget)}
+        </strong>
+        <div
+          className="info-progress"
+          role="progressbar"
+          aria-label={messages.timer.dailyGoalProgress(
+            dailyFocusCompleted,
+            dailyFocusTarget,
+          )}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={dailyGoalPercent}
+        >
+          <span style={{ width: `${dailyGoalPercent}%` }} />
+        </div>
+        <span>{messages.timer.dailyGoalPercent(dailyGoalPercent)}</span>
+        <strong>
           {messages.timer.progress(
             snapshot.cycleCount,
             snapshot.settings.longBreakEvery,
@@ -174,7 +198,7 @@ function AppContent({
       <header className="top-bar">
         <div className="brand-block">
           <h1>Pomoduo</h1>
-          <TimerInfoPopover snapshot={snapshot} />
+          <TimerInfoPopover snapshot={snapshot} insightsSnapshot={insightsSnapshot} />
         </div>
         <div className="top-actions">
           <nav className="tabs">

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { normalizeLocale, useI18n, type LocaleCode } from '../../i18n';
-import type { GoalSettings, PeriodKey } from '../insights/types';
+import type { GoalSettings } from '../insights/types';
 import type { Settings } from '../timer/types';
 
 interface SettingsViewProps {
@@ -22,7 +22,6 @@ interface FormState {
   locale: LocaleCode;
 }
 
-const PERIOD_ORDER: PeriodKey[] = ['daily', 'weekly', 'monthly'];
 const MS_PER_MINUTE = 60_000;
 
 function settingsToFormState(settings: Settings): FormState {
@@ -80,38 +79,20 @@ function formStateToSettings(form: FormState, fallback: Settings): Settings {
   };
 }
 
-function sanitizeGoalSettings(form: GoalSettings, fallback: GoalSettings): GoalSettings {
+function mergeDailyGoalSettings(
+  dailyFocusTarget: number,
+  fallback: GoalSettings,
+): GoalSettings {
   return {
     daily: {
       focusTarget: sanitizePositiveInteger(
-        form.daily.focusTarget,
+        dailyFocusTarget,
         fallback.daily.focusTarget,
       ),
-      longCycleTarget: sanitizePositiveInteger(
-        form.daily.longCycleTarget,
-        fallback.daily.longCycleTarget,
-      ),
+      longCycleTarget: fallback.daily.longCycleTarget,
     },
-    weekly: {
-      focusTarget: sanitizePositiveInteger(
-        form.weekly.focusTarget,
-        fallback.weekly.focusTarget,
-      ),
-      longCycleTarget: sanitizePositiveInteger(
-        form.weekly.longCycleTarget,
-        fallback.weekly.longCycleTarget,
-      ),
-    },
-    monthly: {
-      focusTarget: sanitizePositiveInteger(
-        form.monthly.focusTarget,
-        fallback.monthly.focusTarget,
-      ),
-      longCycleTarget: sanitizePositiveInteger(
-        form.monthly.longCycleTarget,
-        fallback.monthly.longCycleTarget,
-      ),
-    },
+    weekly: { ...fallback.weekly },
+    monthly: { ...fallback.monthly },
   };
 }
 
@@ -125,7 +106,9 @@ export default function SettingsView({
 }: SettingsViewProps) {
   const { messages } = useI18n();
   const [form, setForm] = useState<FormState>(settingsToFormState(settings));
-  const [goalForm, setGoalForm] = useState<GoalSettings | null>(goals);
+  const [dailyGoalTarget, setDailyGoalTarget] = useState<number | null>(
+    goals ? goals.daily.focusTarget : null,
+  );
 
   useEffect(() => {
     setForm(settingsToFormState(settings));
@@ -140,7 +123,7 @@ export default function SettingsView({
   ]);
 
   useEffect(() => {
-    setGoalForm(goals);
+    setDailyGoalTarget(goals ? goals.daily.focusTarget : null);
   }, [goals]);
 
   const isSaving = isBusy || isGoalBusy;
@@ -148,11 +131,11 @@ export default function SettingsView({
   const handleSaveAll = async () => {
     await onSave(formStateToSettings(form, settings));
 
-    if (!goalForm || !goals) {
+    if (dailyGoalTarget === null || !goals) {
       return;
     }
 
-    await onSaveGoals(sanitizeGoalSettings(goalForm, goals));
+    await onSaveGoals(mergeDailyGoalSettings(dailyGoalTarget, goals));
   };
 
   return (
@@ -272,60 +255,18 @@ export default function SettingsView({
 
         <section className="settings-section">
           <h3>{messages.settings.goalsTitle}</h3>
-          {goalForm ? (
-            <div className="settings-goals-grid">
-              <div className="settings-goals-head" />
-              <div className="settings-goals-head">{messages.settings.focusTarget}</div>
-              <div className="settings-goals-head">{messages.settings.longCycleTarget}</div>
-
-              {PERIOD_ORDER.map((period) => (
-                <div key={period} className="settings-goals-row">
-                  <label className="settings-goals-label">
-                    {messages.settings.goalPeriods[period]}
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    step={1}
-                    disabled={isSaving}
-                    value={goalForm[period].focusTarget}
-                    onChange={(event) =>
-                      setGoalForm((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              [period]: {
-                                ...prev[period],
-                                focusTarget: event.target.valueAsNumber,
-                              },
-                            }
-                          : prev,
-                      )
-                    }
-                  />
-                  <input
-                    type="number"
-                    min={1}
-                    step={1}
-                    disabled={isSaving}
-                    value={goalForm[period].longCycleTarget}
-                    onChange={(event) =>
-                      setGoalForm((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              [period]: {
-                                ...prev[period],
-                                longCycleTarget: event.target.valueAsNumber,
-                              },
-                            }
-                          : prev,
-                      )
-                    }
-                  />
-                </div>
-              ))}
-            </div>
+          {dailyGoalTarget !== null ? (
+            <label className="settings-goal-single">
+              {messages.settings.dailyPomodoroTarget}
+              <input
+                type="number"
+                min={1}
+                step={1}
+                disabled={isSaving}
+                value={dailyGoalTarget}
+                onChange={(event) => setDailyGoalTarget(event.target.valueAsNumber)}
+              />
+            </label>
           ) : (
             <p className="settings-goals-loading">{messages.settings.goalsLoading}</p>
           )}

@@ -25,7 +25,7 @@ describe('SettingsView', () => {
     const onSave = vi.fn(async () => {});
     const onSaveGoals = vi.fn(async () => {});
 
-    const { container } = render(
+    render(
       <I18nProvider locale="en-US">
         <SettingsView
           settings={sampleSettings}
@@ -38,12 +38,11 @@ describe('SettingsView', () => {
       </I18nProvider>,
     );
 
-    expect(screen.getByRole('heading', { name: 'Goals' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Goal' })).toBeInTheDocument();
 
-    const goalInputs = container.querySelectorAll('.settings-goals-grid input');
-    expect(goalInputs.length).toBe(6);
+    const dailyGoalInput = screen.getByLabelText('Daily Pomodoro Target');
 
-    fireEvent.change(goalInputs[0] as HTMLInputElement, {
+    fireEvent.change(dailyGoalInput, {
       target: { value: '9' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
@@ -57,7 +56,9 @@ describe('SettingsView', () => {
 
     expect(onSaveGoals).toHaveBeenCalledWith(
       expect.objectContaining({
-        daily: expect.objectContaining({ focusTarget: 9 }),
+        daily: expect.objectContaining({ focusTarget: 9, longCycleTarget: 2 }),
+        weekly: sampleGoals.weekly,
+        monthly: sampleGoals.monthly,
       }),
     );
   });
