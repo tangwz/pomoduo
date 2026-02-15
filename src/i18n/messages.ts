@@ -8,6 +8,7 @@ export interface I18nMessages {
   tabs: {
     timer: string;
     settings: string;
+    insights: string;
   };
   timer: {
     phaseLabels: Record<PhaseKey, string>;
@@ -31,6 +32,7 @@ export interface I18nMessages {
     notifyEnabled: string;
     soundEnabled: string;
     save: string;
+    saveAll: string;
     languageOptions: Record<LocaleCode, string>;
     goalsTitle: string;
     goalsLoading: string;
@@ -83,6 +85,7 @@ export const MESSAGES: Record<LocaleCode, I18nMessages> = {
     tabs: {
       timer: 'Timer',
       settings: 'Settings',
+      insights: 'Insights',
     },
     timer: {
       phaseLabels: {
@@ -111,6 +114,7 @@ export const MESSAGES: Record<LocaleCode, I18nMessages> = {
       notifyEnabled: 'Enable Notifications',
       soundEnabled: 'Enable Sound',
       save: 'Save Settings',
+      saveAll: 'Save Changes',
       languageOptions: {
         'en-US': 'English',
         'zh-CN': '简体中文',
@@ -176,6 +180,7 @@ export const MESSAGES: Record<LocaleCode, I18nMessages> = {
     tabs: {
       timer: '计时',
       settings: '设置',
+      insights: '统计',
     },
     timer: {
       phaseLabels: {
@@ -204,6 +209,7 @@ export const MESSAGES: Record<LocaleCode, I18nMessages> = {
       notifyEnabled: '启用系统通知',
       soundEnabled: '启用提示音',
       save: '保存设置',
+      saveAll: '保存更改',
       languageOptions: {
         'en-US': 'English',
         'zh-CN': '简体中文',

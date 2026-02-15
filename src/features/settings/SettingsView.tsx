@@ -143,7 +143,11 @@ export default function SettingsView({
     setGoalForm(goals);
   }, [goals]);
 
-  const handleSaveGoals = async () => {
+  const isSaving = isBusy || isGoalBusy;
+
+  const handleSaveAll = async () => {
+    await onSave(formStateToSettings(form, settings));
+
     if (!goalForm || !goals) {
       return;
     }
@@ -153,129 +157,122 @@ export default function SettingsView({
 
   return (
     <section className="settings-panel">
-      <section className="settings-basic-section">
-        <h3>{messages.settings.generalTitle}</h3>
-        <div className="settings-grid">
-          <label>
-            {messages.settings.focusMinutes}
+      <section className="settings-card">
+        <section className="settings-section">
+          <h3>{messages.settings.generalTitle}</h3>
+          <div className="settings-grid">
+            <label>
+              {messages.settings.focusMinutes}
+              <input
+                type="number"
+                min={1}
+                step={1}
+                disabled={isSaving}
+                value={form.focusMinutes}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    focusMinutes: event.target.valueAsNumber,
+                  }))
+                }
+              />
+            </label>
+            <label>
+              {messages.settings.shortBreakMinutes}
+              <input
+                type="number"
+                min={1}
+                step={1}
+                disabled={isSaving}
+                value={form.shortBreakMinutes}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    shortBreakMinutes: event.target.valueAsNumber,
+                  }))
+                }
+              />
+            </label>
+            <label>
+              {messages.settings.longBreakMinutes}
+              <input
+                type="number"
+                min={1}
+                step={1}
+                disabled={isSaving}
+                value={form.longBreakMinutes}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    longBreakMinutes: event.target.valueAsNumber,
+                  }))
+                }
+              />
+            </label>
+            <label>
+              {messages.settings.longBreakEvery}
+              <input
+                type="number"
+                min={1}
+                step={1}
+                disabled={isSaving}
+                value={form.longBreakEvery}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    longBreakEvery: event.target.valueAsNumber,
+                  }))
+                }
+              />
+            </label>
+            <label>
+              {messages.settings.language}
+              <select
+                disabled={isSaving}
+                value={form.locale}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    locale: normalizeLocale(event.target.value),
+                  }))
+                }
+              >
+                <option value="en-US">
+                  {messages.settings.languageOptions['en-US']}
+                </option>
+                <option value="zh-CN">
+                  {messages.settings.languageOptions['zh-CN']}
+                </option>
+              </select>
+            </label>
+          </div>
+          <label className="settings-toggle">
             <input
-              type="number"
-              min={1}
-              step={1}
-              disabled={isBusy}
-              value={form.focusMinutes}
+              type="checkbox"
+              disabled={isSaving}
+              checked={form.notifyEnabled}
               onChange={(event) =>
-                setForm((prev) => ({
-                  ...prev,
-                  focusMinutes: event.target.valueAsNumber,
-                }))
+                setForm((prev) => ({ ...prev, notifyEnabled: event.target.checked }))
               }
             />
+            {messages.settings.notifyEnabled}
           </label>
-          <label>
-            {messages.settings.shortBreakMinutes}
+          <label className="settings-toggle">
             <input
-              type="number"
-              min={1}
-              step={1}
-              disabled={isBusy}
-              value={form.shortBreakMinutes}
+              type="checkbox"
+              disabled={isSaving}
+              checked={form.soundEnabled}
               onChange={(event) =>
-                setForm((prev) => ({
-                  ...prev,
-                  shortBreakMinutes: event.target.valueAsNumber,
-                }))
+                setForm((prev) => ({ ...prev, soundEnabled: event.target.checked }))
               }
             />
+            {messages.settings.soundEnabled}
           </label>
-          <label>
-            {messages.settings.longBreakMinutes}
-            <input
-              type="number"
-              min={1}
-              step={1}
-              disabled={isBusy}
-              value={form.longBreakMinutes}
-              onChange={(event) =>
-                setForm((prev) => ({
-                  ...prev,
-                  longBreakMinutes: event.target.valueAsNumber,
-                }))
-              }
-            />
-          </label>
-          <label>
-            {messages.settings.longBreakEvery}
-            <input
-              type="number"
-              min={1}
-              step={1}
-              disabled={isBusy}
-              value={form.longBreakEvery}
-              onChange={(event) =>
-                setForm((prev) => ({
-                  ...prev,
-                  longBreakEvery: event.target.valueAsNumber,
-                }))
-              }
-            />
-          </label>
-          <label>
-            {messages.settings.language}
-            <select
-              disabled={isBusy}
-              value={form.locale}
-              onChange={(event) =>
-                setForm((prev) => ({
-                  ...prev,
-                  locale: normalizeLocale(event.target.value),
-                }))
-              }
-            >
-              <option value="en-US">
-                {messages.settings.languageOptions['en-US']}
-              </option>
-              <option value="zh-CN">
-                {messages.settings.languageOptions['zh-CN']}
-              </option>
-            </select>
-          </label>
-        </div>
-        <label className="settings-toggle">
-          <input
-            type="checkbox"
-            disabled={isBusy}
-            checked={form.notifyEnabled}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, notifyEnabled: event.target.checked }))
-            }
-          />
-          {messages.settings.notifyEnabled}
-        </label>
-        <label className="settings-toggle">
-          <input
-            type="checkbox"
-            disabled={isBusy}
-            checked={form.soundEnabled}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, soundEnabled: event.target.checked }))
-            }
-          />
-          {messages.settings.soundEnabled}
-        </label>
-        <button
-          className="settings-save"
-          disabled={isBusy}
-          onClick={() => void onSave(formStateToSettings(form, settings))}
-        >
-          {messages.settings.save}
-        </button>
-      </section>
+        </section>
 
-      <section className="settings-goals-section">
-        <h3>{messages.settings.goalsTitle}</h3>
-        {goalForm ? (
-          <>
+        <section className="settings-section">
+          <h3>{messages.settings.goalsTitle}</h3>
+          {goalForm ? (
             <div className="settings-goals-grid">
               <div className="settings-goals-head" />
               <div className="settings-goals-head">{messages.settings.focusTarget}</div>
@@ -290,7 +287,7 @@ export default function SettingsView({
                     type="number"
                     min={1}
                     step={1}
-                    disabled={isGoalBusy}
+                    disabled={isSaving}
                     value={goalForm[period].focusTarget}
                     onChange={(event) =>
                       setGoalForm((prev) =>
@@ -310,7 +307,7 @@ export default function SettingsView({
                     type="number"
                     min={1}
                     step={1}
-                    disabled={isGoalBusy}
+                    disabled={isSaving}
                     value={goalForm[period].longCycleTarget}
                     onChange={(event) =>
                       setGoalForm((prev) =>
@@ -329,17 +326,18 @@ export default function SettingsView({
                 </div>
               ))}
             </div>
-            <button
-              className="settings-save"
-              disabled={isGoalBusy}
-              onClick={() => void handleSaveGoals()}
-            >
-              {messages.settings.saveGoals}
-            </button>
-          </>
-        ) : (
-          <p className="settings-goals-loading">{messages.settings.goalsLoading}</p>
-        )}
+          ) : (
+            <p className="settings-goals-loading">{messages.settings.goalsLoading}</p>
+          )}
+        </section>
+
+        <button
+          className="settings-save settings-save--primary"
+          disabled={isSaving}
+          onClick={() => void handleSaveAll()}
+        >
+          {messages.settings.saveAll}
+        </button>
       </section>
     </section>
   );

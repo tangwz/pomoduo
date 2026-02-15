@@ -139,7 +139,6 @@ body {
 }
 
 .tabs button,
-.insights-trigger,
 .timer-primary,
 .settings-save {
   border: 1px solid #bfd0da;
@@ -152,7 +151,6 @@ body {
 }
 
 .tabs button.active,
-.insights-trigger:hover,
 .timer-primary:hover,
 .settings-save:hover {
   transform: translateY(-1px);
@@ -161,7 +159,6 @@ body {
 }
 
 .tabs button:disabled,
-.insights-trigger:disabled,
 .timer-primary:disabled,
 .settings-save:disabled,
 .settings-grid input:disabled,
@@ -173,10 +170,6 @@ body {
   opacity: 0.6;
   transform: none;
   box-shadow: none;
-}
-
-.insights-trigger {
-  font-weight: 700;
 }
 
 .timer-panel {
@@ -308,9 +301,30 @@ body {
 .settings-panel {
   width: min(920px, 100%);
   margin: 0 auto;
+}
+
+.settings-card {
+  border: 1px solid #c8dbe6;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 14px;
   display: grid;
-  gap: 14px;
-  align-content: start;
+  gap: 16px;
+}
+
+.settings-section {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-section + .settings-section {
+  border-top: 1px dashed #d4e3eb;
+  padding-top: 14px;
+}
+
+.settings-section h3 {
+  margin: 0;
+  color: #12374d;
 }
 
 .settings-grid {
@@ -344,26 +358,42 @@ body {
   align-items: center;
 }
 
-.settings-basic-section,
-.settings-goals-section {
-  border: 1px solid #c8dbe6;
-  border-radius: 10px;
-  background: #ffffff;
-  padding: 12px;
-  display: grid;
-  gap: 10px;
-}
-
-.settings-basic-section h3,
-.settings-goals-section h3 {
-  margin: 0;
-  color: #12374d;
+.settings-save--primary {
+  justify-self: end;
+  min-width: 160px;
+  font-weight: 700;
 }
 
 .settings-goals-loading {
   margin: 0;
   color: #5d7584;
   font-size: 0.9rem;
+}
+
+.insights-page {
+  width: min(920px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.insights-page-head h2 {
+  margin: 0;
+  color: #12374d;
+  font-size: 1.15rem;
+}
+
+.insights-page-card {
+  border: 1px solid #c8dbe6;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.insights-page .insights-loading {
+  margin: 0;
+  padding: 0;
 }
 
 .insights-overlay {

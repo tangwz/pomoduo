@@ -21,7 +21,7 @@ const sampleGoals: GoalSettings = {
 };
 
 describe('SettingsView', () => {
-  it('renders goals inside settings and submits updated goal values', async () => {
+  it('renders merged settings and saves timer and goals with one button', async () => {
     const onSave = vi.fn(async () => {});
     const onSaveGoals = vi.fn(async () => {});
 
@@ -46,11 +46,14 @@ describe('SettingsView', () => {
     fireEvent.change(goalInputs[0] as HTMLInputElement, {
       target: { value: '9' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Save Goals' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
 
     await waitFor(() => {
+      expect(onSave).toHaveBeenCalledTimes(1);
       expect(onSaveGoals).toHaveBeenCalledTimes(1);
     });
+
+    expect(screen.queryByRole('button', { name: 'Save Goals' })).toBeNull();
 
     expect(onSaveGoals).toHaveBeenCalledWith(
       expect.objectContaining({

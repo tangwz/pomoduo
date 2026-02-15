@@ -3,13 +3,13 @@ import {
   isPermissionGranted,
   requestPermission,
 } from '@tauri-apps/plugin-notification';
-import InsightsDrawer from './features/insights/InsightsDrawer';
 import {
   listenProductivityUpdated,
   timerGetInsights,
   timerUpdateGoals,
 } from './features/insights/insightsEvents';
 import type { GoalSettings, InsightsSnapshot } from './features/insights/types';
+import InsightsView from './features/insights/InsightsView';
 import SettingsView from './features/settings/SettingsView';
 import TimerView from './features/timer/TimerView';
 import { detectPreferredLocale, I18nProvider, useI18n } from './i18n';
@@ -24,7 +24,7 @@ import {
 } from './features/timer/timerEvents';
 import type { Settings, TimerSnapshot } from './features/timer/types';
 
-type ActiveTab = 'timer' | 'settings';
+type ActiveTab = 'timer' | 'settings' | 'insights';
 
 async function ensureNotificationPermission(): Promise<boolean> {
   try {
@@ -70,14 +70,11 @@ interface AppContentProps {
   isGoalBusy: boolean;
   errorMessage: string | null;
   insightsErrorMessage: string | null;
-  isInsightsOpen: boolean;
   onSwitchTab: (tab: ActiveTab) => void;
   onStart: () => Promise<void>;
   onResume: () => Promise<void>;
   onReset: () => Promise<void>;
   onSaveSettings: (settings: Settings) => Promise<void>;
-  onOpenInsights: () => void;
-  onCloseInsights: () => void;
   onSaveGoals: (goals: GoalSettings) => Promise<void>;
 }
 
@@ -155,14 +152,11 @@ function AppContent({
   isGoalBusy,
   errorMessage,
   insightsErrorMessage,
-  isInsightsOpen,
   onSwitchTab,
   onStart,
   onResume,
   onReset,
   onSaveSettings,
-  onOpenInsights,
-  onCloseInsights,
   onSaveGoals,
 }: AppContentProps) {
   const { messages } = useI18n();
@@ -198,15 +192,14 @@ function AppContent({
             >
               {messages.tabs.settings}
             </button>
+            <button
+              className={tab === 'insights' ? 'active' : ''}
+              disabled={isBusy}
+              onClick={() => onSwitchTab('insights')}
+            >
+              {messages.tabs.insights}
+            </button>
           </nav>
-          <button
-            type="button"
-            className="insights-trigger"
-            aria-label={messages.insights.openButtonLabel}
-            onClick={onOpenInsights}
-          >
-            ▦ {messages.insights.triggerLabel}
-          </button>
         </div>
       </header>
       {errorMessage ? (
@@ -223,7 +216,8 @@ function AppContent({
           onResume={onResume}
           onReset={onReset}
         />
-      ) : (
+      ) : null}
+      {tab === 'settings' ? (
         <SettingsView
           settings={snapshot.settings}
           goals={insightsSnapshot?.goals ?? null}
@@ -232,14 +226,10 @@ function AppContent({
           onSave={onSaveSettings}
           onSaveGoals={onSaveGoals}
         />
-      )}
-
-      <InsightsDrawer
-        isOpen={isInsightsOpen}
-        snapshot={insightsSnapshot}
-        errorMessage={insightsErrorMessage}
-        onClose={onCloseInsights}
-      />
+      ) : null}
+      {tab === 'insights' ? (
+        <InsightsView snapshot={insightsSnapshot} errorMessage={insightsErrorMessage} />
+      ) : null}
     </main>
   );
 }
@@ -268,7 +258,6 @@ export default function App() {
   );
   const [isBusy, setIsBusy] = useState(false);
   const [isGoalBusy, setIsGoalBusy] = useState(false);
-  const [isInsightsOpen, setIsInsightsOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [insightsErrorMessage, setInsightsErrorMessage] = useState<string | null>(null);
 
@@ -442,14 +431,11 @@ export default function App() {
         isGoalBusy={isGoalBusy}
         errorMessage={errorMessage}
         insightsErrorMessage={insightsErrorMessage}
-        isInsightsOpen={isInsightsOpen}
         onSwitchTab={setTab}
         onStart={handleStart}
         onResume={handleResume}
         onReset={handleReset}
         onSaveSettings={handleSaveSettings}
-        onOpenInsights={() => setIsInsightsOpen(true)}
-        onCloseInsights={() => setIsInsightsOpen(false)}
         onSaveGoals={handleSaveGoals}
       />
     </I18nProvider>
