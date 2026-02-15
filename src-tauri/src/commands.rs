@@ -12,18 +12,8 @@ pub fn timer_start(engine: State<'_, TimerEngine>) -> Result<TimerSnapshot, Stri
 }
 
 #[tauri::command]
-pub fn timer_pause(engine: State<'_, TimerEngine>) -> Result<TimerSnapshot, String> {
-    engine.pause()
-}
-
-#[tauri::command]
 pub fn timer_resume(engine: State<'_, TimerEngine>) -> Result<TimerSnapshot, String> {
     engine.resume()
-}
-
-#[tauri::command]
-pub fn timer_skip(engine: State<'_, TimerEngine>) -> Result<TimerSnapshot, String> {
-    engine.skip()
 }
 
 #[tauri::command]

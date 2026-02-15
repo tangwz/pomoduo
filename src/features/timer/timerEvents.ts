@@ -11,11 +11,7 @@ export const timerGetState = (): Promise<TimerSnapshot> =>
 
 export const timerStart = (): Promise<TimerSnapshot> => invoke('timer_start');
 
-export const timerPause = (): Promise<TimerSnapshot> => invoke('timer_pause');
-
 export const timerResume = (): Promise<TimerSnapshot> => invoke('timer_resume');
-
-export const timerSkip = (): Promise<TimerSnapshot> => invoke('timer_skip');
 
 export const timerReset = (): Promise<TimerSnapshot> => invoke('timer_reset');
 

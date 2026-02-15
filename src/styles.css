@@ -33,6 +33,15 @@ body {
   gap: clamp(14px, 2vh, 24px);
 }
 
+.app-error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #f1beb4;
+  background: #fff2ef;
+  color: #7f2317;
+}
+
 .top-bar {
   display: flex;
   align-items: center;
@@ -141,6 +150,18 @@ body {
   transform: translateY(-1px);
   box-shadow: 0 8px 16px #2648591f;
   background: #dcecf4;
+}
+
+.tabs button:disabled,
+.timer-primary:disabled,
+.settings-save:disabled,
+.settings-grid input:disabled,
+.settings-grid select:disabled,
+.settings-toggle input:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+  box-shadow: none;
 }
 
 .timer-panel {

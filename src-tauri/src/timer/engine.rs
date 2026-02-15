@@ -161,7 +161,7 @@ impl TimerState {
         if state.is_running {
             if let Some(end_at) = state.end_at_ms {
                 if end_at <= now {
-                    state.complete_current_phase(false);
+                    state.complete_current_phase();
                 } else {
                     state.remaining_ms = end_at - now;
                 }
@@ -209,16 +209,20 @@ impl TimerState {
         }
     }
 
-    fn complete_current_phase(&mut self, skipped: bool) -> CompletionMeta {
+    fn complete_current_phase(&mut self) -> CompletionMeta {
         let finished_phase = self.phase;
 
-        if finished_phase == Phase::Focus && !skipped {
+        if finished_phase == Phase::Focus {
             self.cycle_count += 1;
         }
 
         let next_phase = match finished_phase {
             Phase::Focus => {
-                if self.cycle_count > 0 && self.cycle_count % self.settings.long_break_every == 0 {
+                if self.cycle_count > 0
+                    && self
+                        .cycle_count
+                        .is_multiple_of(self.settings.long_break_every)
+                {
                     Phase::LongBreak
                 } else {
                     Phase::ShortBreak
@@ -265,7 +269,7 @@ impl TimerEngine {
 
         let snapshot = engine.get_state();
         let _ = engine.storage.save_settings(&snapshot.settings);
-        let _ = engine.storage.save_runtime_state(&RuntimeState {
+        let _ = engine.persist_runtime_state(&RuntimeState {
             phase: snapshot.phase,
             is_running: snapshot.is_running,
             cycle_count: snapshot.cycle_count,
@@ -305,112 +309,94 @@ impl TimerEngine {
         self.run_or_resume()
     }
 
-    pub fn pause(&self) -> Result<TimerSnapshot, String> {
-        let now = now_ms();
-        let mut state = self
-            .state
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-
-        if !state.is_running {
-            return Ok(state.snapshot(now));
-        }
-
-        state.remaining_ms = state.current_remaining_ms(now);
-        state.is_running = false;
-        state.end_at_ms = None;
-
-        self.persist_runtime(&state, now)?;
-
-        Ok(state.snapshot(now))
-    }
-
-    pub fn skip(&self) -> Result<TimerSnapshot, String> {
-        let now = now_ms();
-        let mut state = self
-            .state
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-
-        state.complete_current_phase(true);
-        self.persist_runtime(&state, now)?;
-
-        Ok(state.snapshot(now))
-    }
-
     pub fn reset(&self) -> Result<TimerSnapshot, String> {
         let now = now_ms();
-        let mut state = self
-            .state
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let (snapshot, runtime_state) = {
+            let mut state = self
+                .state
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
 
-        state.phase = Phase::Focus;
-        state.is_running = false;
-        state.cycle_count = 0;
-        state.end_at_ms = None;
-        state.remaining_ms = state.settings.focus_ms;
+            state.phase = Phase::Focus;
+            state.is_running = false;
+            state.cycle_count = 0;
+            state.end_at_ms = None;
+            state.remaining_ms = state.settings.focus_ms;
 
-        self.persist_runtime(&state, now)?;
+            (state.snapshot(now), state.to_runtime_state(now))
+        };
 
-        Ok(state.snapshot(now))
+        self.persist_runtime_state(&runtime_state)?;
+
+        Ok(snapshot)
     }
 
     pub fn update_settings(&self, settings: Settings) -> Result<TimerSnapshot, String> {
         let now = now_ms();
-        let mut state = self
-            .state
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let (snapshot, runtime_state, settings_to_persist) = {
+            let mut state = self
+                .state
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
 
-        let next_settings = settings.sanitized();
-        state.settings = next_settings;
+            let next_settings = settings.sanitized();
+            state.settings = next_settings;
 
-        if state.is_running {
-            let remaining = state.current_remaining_ms(now);
-            state.end_at_ms = Some(now + remaining);
-            state.remaining_ms = remaining;
-        } else {
-            state.remaining_ms = phase_duration_ms(state.phase, &state.settings);
-            state.end_at_ms = None;
-        }
+            if state.is_running {
+                let remaining = state.current_remaining_ms(now);
+                state.end_at_ms = Some(now + remaining);
+                state.remaining_ms = remaining;
+            } else {
+                state.remaining_ms = phase_duration_ms(state.phase, &state.settings);
+                state.end_at_ms = None;
+            }
 
-        self.persist_settings(&state.settings)?;
-        self.persist_runtime(&state, now)?;
+            (
+                state.snapshot(now),
+                state.to_runtime_state(now),
+                state.settings.clone(),
+            )
+        };
 
-        Ok(state.snapshot(now))
+        self.persist_settings(&settings_to_persist)?;
+        self.persist_runtime_state(&runtime_state)?;
+
+        Ok(snapshot)
     }
 
     fn run_or_resume(&self) -> Result<TimerSnapshot, String> {
         let now = now_ms();
-        let mut state = self
-            .state
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let (snapshot, runtime_state) = {
+            let mut state = self
+                .state
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
 
-        if state.is_running {
-            return Ok(state.snapshot(now));
-        }
+            if state.is_running {
+                return Ok(state.snapshot(now));
+            }
 
-        let remaining = if state.remaining_ms > 0 {
-            state.remaining_ms
-        } else {
-            phase_duration_ms(state.phase, &state.settings)
+            let remaining = if state.remaining_ms > 0 {
+                state.remaining_ms
+            } else {
+                phase_duration_ms(state.phase, &state.settings)
+            };
+
+            state.remaining_ms = remaining;
+            state.end_at_ms = Some(now + remaining);
+            state.is_running = true;
+
+            (state.snapshot(now), state.to_runtime_state(now))
         };
 
-        state.remaining_ms = remaining;
-        state.end_at_ms = Some(now + remaining);
-        state.is_running = true;
+        self.persist_runtime_state(&runtime_state)?;
 
-        self.persist_runtime(&state, now)?;
-
-        Ok(state.snapshot(now))
+        Ok(snapshot)
     }
 
     fn handle_tick(&self, app: &AppHandle) {
         let now = now_ms();
-        let (tick_snapshot, completed) = {
-            let mut completed: Option<CompletionMeta> = None;
+        let (tick_snapshot, completed, runtime_state) = {
             let mut state = self
                 .state
                 .lock()
@@ -424,15 +410,22 @@ impl TimerEngine {
 
             if remaining > 0 {
                 state.remaining_ms = remaining;
+                (state.snapshot(now), None, None)
             } else {
-                completed = Some(state.complete_current_phase(false));
+                let completion = state.complete_current_phase();
+                (
+                    state.snapshot(now),
+                    Some(completion),
+                    Some(state.to_runtime_state(now)),
+                )
             }
+        };
 
-            if self.persist_runtime(&state, now).is_err() {
+        if let Some(runtime_state) = runtime_state.as_ref() {
+            if self.persist_runtime_state(runtime_state).is_err() {
                 return;
             }
-            (state.snapshot(now), completed)
-        };
+        }
 
         let _ = app.emit("timer_tick", tick_snapshot);
 
@@ -463,9 +456,9 @@ impl TimerEngine {
             .map_err(|err| format!("failed to save settings: {err}"))
     }
 
-    fn persist_runtime(&self, state: &TimerState, now: i64) -> Result<(), String> {
+    fn persist_runtime_state(&self, runtime_state: &RuntimeState) -> Result<(), String> {
         self.storage
-            .save_runtime_state(&state.to_runtime_state(now))
+            .save_runtime_state(runtime_state)
             .map_err(|err| format!("failed to save runtime state: {err}"))
     }
 }

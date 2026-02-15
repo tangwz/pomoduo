@@ -51,7 +51,21 @@ impl StateFileStore {
         fs::create_dir_all(&self.base_dir)?;
         let bytes = serde_json::to_vec_pretty(value)
             .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
-        fs::write(path, bytes)
+
+        let tmp_path = path.with_extension("tmp");
+        fs::write(&tmp_path, bytes)?;
+
+        if let Err(rename_error) = fs::rename(&tmp_path, &path) {
+            if path.exists() {
+                fs::remove_file(&path)?;
+                fs::rename(&tmp_path, &path)?;
+            } else {
+                let _ = fs::remove_file(&tmp_path);
+                return Err(rename_error);
+            }
+        }
+
+        Ok(())
     }
 
     fn settings_file(&self) -> PathBuf {

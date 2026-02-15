@@ -13,7 +13,7 @@
 - 阶段：`Focus` / `ShortBreak` / `LongBreak`
 - 默认时长：25 / 5 / 15 分钟（可配置）
 - 完成 N 次专注后进入长休息（默认 N=4，可配置）
-- 操作：`Start` / `Pause` / `Resume` / `Skip` / `Reset`
+- 操作：`Start` / `Resume` / `Reset`（不允许 Pause 和 Skip，要么放弃这个番茄，要么坚持下去完成）
 
 ### 提醒
 - 阶段结束系统通知（可开关）
@@ -25,7 +25,7 @@
 
 ### 持久化
 - `settings.json`：时长、长休息间隔、通知/声音开关、语言
-- `runtime_state.json`：phase、running、paused/endAt/remaining 等运行状态
+- `runtime_state.json`：phase、running、endAt/remaining 等运行状态
 
 ## 2. 技术栈与架构
 
@@ -35,9 +35,9 @@
 - Storage：本地 JSON 文件（无 DB）
 
 核心架构：
-- UI -> Rust：`invoke("timer_start" | "timer_pause" | ...)`
+- UI -> Rust：`invoke("timer_get_state" | "timer_start" | "timer_resume" | "timer_reset" | "timer_update_settings")`
 - Rust -> UI：`emit("timer_tick")`（每秒）
-- 抗漂移计算：运行中使用 `remaining = end_at - now`，暂停时保存 `remaining_ms`
+- 抗漂移计算：运行中使用 `remaining = end_at - now`，非运行态保存 `remaining_ms`
 
 ## 3. 目录结构
 

@@ -4,6 +4,7 @@ import type { Settings } from '../timer/types';
 
 interface SettingsViewProps {
   settings: Settings;
+  isBusy: boolean;
   onSave: (settings: Settings) => Promise<void>;
 }
 
@@ -34,19 +35,51 @@ function settingsToFormState(settings: Settings): FormState {
   };
 }
 
-function formStateToSettings(form: FormState): Settings {
+function sanitizePositiveInteger(value: number, fallback: number): number {
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+  return Math.max(1, Math.round(value));
+}
+
+function formStateToSettings(form: FormState, fallback: Settings): Settings {
+  const fallbackFocusMinutes = Math.max(
+    1,
+    Math.round(fallback.focusMs / MS_PER_MINUTE),
+  );
+  const fallbackShortBreakMinutes = Math.max(
+    1,
+    Math.round(fallback.shortBreakMs / MS_PER_MINUTE),
+  );
+  const fallbackLongBreakMinutes = Math.max(
+    1,
+    Math.round(fallback.longBreakMs / MS_PER_MINUTE),
+  );
   return {
-    focusMs: Math.max(1, form.focusMinutes) * MS_PER_MINUTE,
-    shortBreakMs: Math.max(1, form.shortBreakMinutes) * MS_PER_MINUTE,
-    longBreakMs: Math.max(1, form.longBreakMinutes) * MS_PER_MINUTE,
-    longBreakEvery: Math.max(1, form.longBreakEvery),
+    focusMs:
+      sanitizePositiveInteger(form.focusMinutes, fallbackFocusMinutes) *
+      MS_PER_MINUTE,
+    shortBreakMs:
+      sanitizePositiveInteger(form.shortBreakMinutes, fallbackShortBreakMinutes) *
+      MS_PER_MINUTE,
+    longBreakMs:
+      sanitizePositiveInteger(form.longBreakMinutes, fallbackLongBreakMinutes) *
+      MS_PER_MINUTE,
+    longBreakEvery: sanitizePositiveInteger(
+      form.longBreakEvery,
+      Math.max(1, fallback.longBreakEvery),
+    ),
     notifyEnabled: form.notifyEnabled,
     soundEnabled: form.soundEnabled,
     locale: form.locale,
   };
 }
 
-export default function SettingsView({ settings, onSave }: SettingsViewProps) {
+export default function SettingsView({
+  settings,
+  isBusy,
+  onSave,
+}: SettingsViewProps) {
   const { messages } = useI18n();
   const [form, setForm] = useState<FormState>(settingsToFormState(settings));
 
@@ -70,11 +103,13 @@ export default function SettingsView({ settings, onSave }: SettingsViewProps) {
           <input
             type="number"
             min={1}
+            step={1}
+            disabled={isBusy}
             value={form.focusMinutes}
             onChange={(event) =>
               setForm((prev) => ({
                 ...prev,
-                focusMinutes: Number(event.target.value),
+                focusMinutes: event.target.valueAsNumber,
               }))
             }
           />
@@ -84,11 +119,13 @@ export default function SettingsView({ settings, onSave }: SettingsViewProps) {
           <input
             type="number"
             min={1}
+            step={1}
+            disabled={isBusy}
             value={form.shortBreakMinutes}
             onChange={(event) =>
               setForm((prev) => ({
                 ...prev,
-                shortBreakMinutes: Number(event.target.value),
+                shortBreakMinutes: event.target.valueAsNumber,
               }))
             }
           />
@@ -98,11 +135,13 @@ export default function SettingsView({ settings, onSave }: SettingsViewProps) {
           <input
             type="number"
             min={1}
+            step={1}
+            disabled={isBusy}
             value={form.longBreakMinutes}
             onChange={(event) =>
               setForm((prev) => ({
                 ...prev,
-                longBreakMinutes: Number(event.target.value),
+                longBreakMinutes: event.target.valueAsNumber,
               }))
             }
           />
@@ -112,11 +151,13 @@ export default function SettingsView({ settings, onSave }: SettingsViewProps) {
           <input
             type="number"
             min={1}
+            step={1}
+            disabled={isBusy}
             value={form.longBreakEvery}
             onChange={(event) =>
               setForm((prev) => ({
                 ...prev,
-                longBreakEvery: Number(event.target.value),
+                longBreakEvery: event.target.valueAsNumber,
               }))
             }
           />
@@ -124,6 +165,7 @@ export default function SettingsView({ settings, onSave }: SettingsViewProps) {
         <label>
           {messages.settings.language}
           <select
+            disabled={isBusy}
             value={form.locale}
             onChange={(event) =>
               setForm((prev) => ({
@@ -144,6 +186,7 @@ export default function SettingsView({ settings, onSave }: SettingsViewProps) {
       <label className="settings-toggle">
         <input
           type="checkbox"
+          disabled={isBusy}
           checked={form.notifyEnabled}
           onChange={(event) =>
             setForm((prev) => ({ ...prev, notifyEnabled: event.target.checked }))
@@ -154,6 +197,7 @@ export default function SettingsView({ settings, onSave }: SettingsViewProps) {
       <label className="settings-toggle">
         <input
           type="checkbox"
+          disabled={isBusy}
           checked={form.soundEnabled}
           onChange={(event) =>
             setForm((prev) => ({ ...prev, soundEnabled: event.target.checked }))
@@ -163,7 +207,8 @@ export default function SettingsView({ settings, onSave }: SettingsViewProps) {
       </label>
       <button
         className="settings-save"
-        onClick={() => void onSave(formStateToSettings(form))}
+        disabled={isBusy}
+        onClick={() => void onSave(formStateToSettings(form, settings))}
       >
         {messages.settings.save}
       </button>

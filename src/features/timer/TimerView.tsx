@@ -4,6 +4,7 @@ import type { TimerSnapshot } from './types';
 
 interface TimerViewProps {
   snapshot: TimerSnapshot;
+  isBusy: boolean;
   onStart: () => Promise<void>;
   onResume: () => Promise<void>;
   onReset: () => Promise<void>;
@@ -31,6 +32,7 @@ function formatMs(ms: number): string {
 
 export default function TimerView({
   snapshot,
+  isBusy,
   onStart,
   onResume,
   onReset,
@@ -119,6 +121,7 @@ export default function TimerView({
           className={`timer-primary ${
             snapshot.isRunning ? 'timer-primary--danger' : 'timer-primary--start'
           }`}
+          disabled={isBusy}
           onClick={() => void handlePrimaryAction()}
         >
           {actionLabel}

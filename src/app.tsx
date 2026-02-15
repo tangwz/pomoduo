@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   isPermissionGranted,
   requestPermission,
@@ -19,13 +19,19 @@ import type { Settings, TimerSnapshot } from './features/timer/types';
 
 type ActiveTab = 'timer' | 'settings';
 
-async function ensureNotificationPermission(): Promise<void> {
-  let granted = await isPermissionGranted();
-  if (!granted) {
-    granted = (await requestPermission()) === 'granted';
-  }
-  if (!granted) {
-    console.warn('Notification permission not granted');
+async function ensureNotificationPermission(): Promise<boolean> {
+  try {
+    let granted = await isPermissionGranted();
+    if (!granted) {
+      granted = (await requestPermission()) === 'granted';
+    }
+    if (!granted) {
+      console.warn('Notification permission not granted');
+    }
+    return granted;
+  } catch (error) {
+    console.error('Failed to check notification permission', error);
+    return false;
   }
 }
 
@@ -52,6 +58,8 @@ function playBeep(): void {
 interface AppContentProps {
   tab: ActiveTab;
   snapshot: TimerSnapshot | null;
+  isBusy: boolean;
+  errorMessage: string | null;
   onSwitchTab: (tab: ActiveTab) => void;
   onStart: () => Promise<void>;
   onResume: () => Promise<void>;
@@ -128,6 +136,8 @@ function TimerInfoPopover({ snapshot }: TimerInfoPopoverProps) {
 function AppContent({
   tab,
   snapshot,
+  isBusy,
+  errorMessage,
   onSwitchTab,
   onStart,
   onResume,
@@ -137,7 +147,11 @@ function AppContent({
   const { messages } = useI18n();
 
   if (!snapshot) {
-    return <main className="app-shell">{messages.loading}</main>;
+    return (
+      <main className="app-shell">
+        {errorMessage ? <p className="app-error">{errorMessage}</p> : messages.loading}
+      </main>
+    );
   }
 
   return (
@@ -150,56 +164,91 @@ function AppContent({
         <nav className="tabs">
           <button
             className={tab === 'timer' ? 'active' : ''}
+            disabled={isBusy}
             onClick={() => onSwitchTab('timer')}
           >
             {messages.tabs.timer}
           </button>
           <button
             className={tab === 'settings' ? 'active' : ''}
+            disabled={isBusy}
             onClick={() => onSwitchTab('settings')}
           >
             {messages.tabs.settings}
           </button>
         </nav>
       </header>
+      {errorMessage ? (
+        <p className="app-error" role="alert">
+          {errorMessage}
+        </p>
+      ) : null}
 
       {tab === 'timer' ? (
-        <TimerView snapshot={snapshot} onStart={onStart} onResume={onResume} onReset={onReset} />
+        <TimerView
+          snapshot={snapshot}
+          isBusy={isBusy}
+          onStart={onStart}
+          onResume={onResume}
+          onReset={onReset}
+        />
       ) : (
-        <SettingsView settings={snapshot.settings} onSave={onSaveSettings} />
+        <SettingsView settings={snapshot.settings} isBusy={isBusy} onSave={onSaveSettings} />
       )}
     </main>
   );
 }
 
+interface SnapshotActionResult {
+  snapshot: TimerSnapshot;
+  warningMessage?: string | null;
+}
+
+function formatErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  if (typeof error === 'string' && error) {
+    return error;
+  }
+  return 'Operation failed';
+}
+
 export default function App() {
   const [tab, setTab] = useState<ActiveTab>('timer');
   const [snapshot, setSnapshot] = useState<TimerSnapshot | null>(null);
+  const [isBusy, setIsBusy] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
     const cleanups: Array<() => void> = [];
 
     const init = async () => {
-      await ensureNotificationPermission();
-      const initialState = await timerGetState();
-      if (mounted) {
-        setSnapshot(initialState);
-      }
-
-      const unlistenTick = await listenTimerTick((nextSnapshot) => {
+      try {
+        const initialState = await timerGetState();
         if (mounted) {
-          setSnapshot(nextSnapshot);
+          setSnapshot(initialState);
         }
-      });
-      cleanups.push(unlistenTick);
 
-      const unlistenCompleted = await listenPhaseCompleted((payload) => {
-        if (payload.soundEnabled) {
-          playBeep();
+        const unlistenTick = await listenTimerTick((nextSnapshot) => {
+          if (mounted) {
+            setSnapshot(nextSnapshot);
+          }
+        });
+        cleanups.push(unlistenTick);
+
+        const unlistenCompleted = await listenPhaseCompleted((payload) => {
+          if (payload.soundEnabled) {
+            playBeep();
+          }
+        });
+        cleanups.push(unlistenCompleted);
+      } catch (error) {
+        if (mounted) {
+          setErrorMessage(formatErrorMessage(error));
         }
-      });
-      cleanups.push(unlistenCompleted);
+      }
     };
 
     void init();
@@ -210,15 +259,76 @@ export default function App() {
     };
   }, []);
 
-  const actions = useMemo(
-    () => ({
-      start: async () => setSnapshot(await timerStart()),
-      resume: async () => setSnapshot(await timerResume()),
-      reset: async () => setSnapshot(await timerReset()),
-      saveSettings: async (settings: Settings) =>
-        setSnapshot(await timerUpdateSettings(settings)),
-    }),
-    [],
+  const executeSnapshotAction = useCallback(
+    async (operation: () => Promise<SnapshotActionResult>) => {
+      if (isBusy) {
+        return;
+      }
+
+      setIsBusy(true);
+      setErrorMessage(null);
+      try {
+        const result = await operation();
+        setSnapshot(result.snapshot);
+        if (result.warningMessage) {
+          setErrorMessage(result.warningMessage);
+        }
+      } catch (error) {
+        setErrorMessage(formatErrorMessage(error));
+      } finally {
+        setIsBusy(false);
+      }
+    },
+    [isBusy],
+  );
+
+  const handleStart = useCallback(async () => {
+    await executeSnapshotAction(async () => {
+      const warningMessage =
+        snapshot?.settings.notifyEnabled && !(await ensureNotificationPermission())
+          ? 'Notification permission not granted. System notifications might not appear.'
+          : null;
+      const nextSnapshot = await timerStart();
+      return { snapshot: nextSnapshot, warningMessage };
+    });
+  }, [executeSnapshotAction, snapshot?.settings.notifyEnabled]);
+
+  const handleResume = useCallback(async () => {
+    await executeSnapshotAction(async () => {
+      const warningMessage =
+        snapshot?.settings.notifyEnabled && !(await ensureNotificationPermission())
+          ? 'Notification permission not granted. System notifications might not appear.'
+          : null;
+      const nextSnapshot = await timerResume();
+      return { snapshot: nextSnapshot, warningMessage };
+    });
+  }, [executeSnapshotAction, snapshot?.settings.notifyEnabled]);
+
+  const handleReset = useCallback(async () => {
+    await executeSnapshotAction(async () => ({
+      snapshot: await timerReset(),
+    }));
+  }, [executeSnapshotAction]);
+
+  const handleSaveSettings = useCallback(
+    async (settings: Settings) => {
+      await executeSnapshotAction(async () => {
+        let settingsToSave = settings;
+        let warningMessage: string | null = null;
+        const shouldRequestPermission =
+          !snapshot?.settings.notifyEnabled && settings.notifyEnabled;
+
+        if (shouldRequestPermission && !(await ensureNotificationPermission())) {
+          settingsToSave = { ...settings, notifyEnabled: false };
+          warningMessage =
+            'Notification permission not granted. Notifications remain disabled.';
+        }
+
+        const nextSnapshot = await timerUpdateSettings(settingsToSave);
+        return { snapshot: nextSnapshot, warningMessage };
+      });
+    },
+    [executeSnapshotAction, snapshot?.settings.notifyEnabled],
   );
 
   const locale = snapshot?.settings.locale ?? detectPreferredLocale();
@@ -228,11 +338,13 @@ export default function App() {
       <AppContent
         tab={tab}
         snapshot={snapshot}
+        isBusy={isBusy}
+        errorMessage={errorMessage}
         onSwitchTab={setTab}
-        onStart={actions.start}
-        onResume={actions.resume}
-        onReset={actions.reset}
-        onSaveSettings={actions.saveSettings}
+        onStart={handleStart}
+        onResume={handleResume}
+        onReset={handleReset}
+        onSaveSettings={handleSaveSettings}
       />
     </I18nProvider>
   );
