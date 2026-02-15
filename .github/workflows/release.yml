@@ -1,0 +1,111 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: macos
+            bundle: dmg
+          - os: windows-latest
+            platform: windows
+            bundle: nsis
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build Tauri bundles
+        run: npm run tauri build -- --bundles ${{ matrix.bundle }}
+
+      - name: Prepare macOS release asset
+        if: matrix.platform == 'macos'
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p release-assets
+          SOURCE_FILE="$(find src-tauri/target/release/bundle/dmg -maxdepth 1 -type f -name '*.dmg' | head -n 1)"
+          if [ -z "$SOURCE_FILE" ]; then
+            echo "No DMG file found."
+            exit 1
+          fi
+          cp "$SOURCE_FILE" "release-assets/Pomoduo_${VERSION}_x64.dmg"
+
+      - name: Prepare Windows release asset
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          $version = $env:GITHUB_REF_NAME -replace '^v', ''
+          New-Item -ItemType Directory -Force -Path release-assets | Out-Null
+          $source = Get-ChildItem -Path "src-tauri/target/release/bundle/nsis" -Filter "*.exe" -File | Select-Object -First 1
+          if (-not $source) {
+            throw "No NSIS installer file found."
+          }
+          Copy-Item $source.FullName -Destination "release-assets/Pomoduo_${version}_x64-setup.exe"
+
+      - name: Upload release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.platform }}
+          path: release-assets/*
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    needs:
+      - build
+
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: release-assets
+
+      - name: Generate SHA256 sums
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd release-assets
+          sha256sum Pomoduo_*.dmg Pomoduo_*-setup.exe > SHA256SUMS.txt
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          body: |
+            This is an unsigned preview build for v0.1.x.
+            macOS and Windows may show security prompts during installation.
+          fail_on_unmatched_files: true
+          files: |
+            release-assets/Pomoduo_*.dmg
+            release-assets/Pomoduo_*-setup.exe
+            release-assets/SHA256SUMS.txt
