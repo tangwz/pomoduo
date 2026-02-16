@@ -517,12 +517,6 @@ body {
   color: #12374d;
 }
 
-.insights-week-start {
-  margin: 0;
-  font-size: 0.84rem;
-  color: #496371;
-}
-
 .insights-heatmap-wrap {
   display: grid;
   gap: 8px;
@@ -532,10 +526,29 @@ body {
   background: #ffffff;
 }
 
+.insights-heatmap-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
 .insights-heatmap-title {
   font-size: 0.9rem;
   font-weight: 600;
   color: #214255;
+}
+
+.insights-week-start {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #6d8391;
+  max-width: 44%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
 }
 
 .insights-heatmap-grid {

@@ -202,9 +202,13 @@ export default function InsightsView({ snapshot, errorMessage }: InsightsViewPro
       ) : (
         <section className="insights-page-card">
           <section className="insights-section">
-            <p className="insights-week-start">{messages.insights.weekStart}</p>
             <div className="insights-heatmap-wrap">
-              <div className="insights-heatmap-title">{messages.insights.heatmapTitle}</div>
+              <div className="insights-heatmap-head">
+                <div className="insights-heatmap-title">{messages.insights.heatmapTitle}</div>
+                <span className="insights-week-start" title={messages.insights.weekStart}>
+                  {messages.insights.weekStart}
+                </span>
+              </div>
               <div
                 className="insights-heatmap-grid"
                 role="img"
